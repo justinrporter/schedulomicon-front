@@ -134,7 +134,7 @@ export interface ValidationWarning {
 - `number | ""` for numeric fields — empty string means user cleared the field; avoids forcing a default 0 that looks like valid input
 - `rotCountMode` is explicit state — do not infer from data presence, causes flickering
 - `id` uses `nanoid()` — never use array index as key (causes React reconciliation bugs on delete)
-- `knownGroups` is **derived**, not stored — `deriveKnownGroups(state)` collects all groups from rotations + blocks, deduplicates, sorts
+- Known groups are **derived**, not stored — resident, block, and rotation group lists are collected separately; `rot_count` per-group uses resident groups only
 
 ---
 
@@ -193,7 +193,7 @@ Pure function — `(state: ScheduleState) => ValidationWarning[]`
 | Coverage min > max | error |
 | rot_count min > max | error |
 | Coverage partially filled (one field blank) | warning |
-| rot_count references group not in knownGroups | warning |
+| rot_count references group not in known resident groups | warning |
 | Prohibition references deleted resident/rotation | error |
 | Duplicate prohibition (same resident + rotation pair) | warning |
 
@@ -222,13 +222,13 @@ App                              ← all state lives here
 │   │   │       └── GroupTagsInput
 │   │   ├── ResidentsSection     ← SectionPanel wrapper
 │   │   │   ├── BulkAddResidents ← paste a roster (textarea modal)
-│   │   │   └── ResidentRow ×N   ← name + group checkboxes
+│   │   │   └── ResidentRow ×N   ← name + optional groups
 │   │   └── ConstraintsSection   ← SectionPanel wrapper
 │   │       └── ProhibitRow ×N   ← resident dropdown + rotation dropdown
 │   └── YamlPreviewPanel         ← sticky; pre block + copy button
 ```
 
-**Shared components:** `SectionPanel`, `GroupTagsInput`, `GroupCheckboxes`, `MinMaxInput`, `AddItemButton`, `DeleteRowButton`, `WarningIcon`, `ConfirmDialog`
+**Shared components:** `SectionPanel`, `GroupTagsInput`, `MinMaxInput`, `AddItemButton`, `DeleteRowButton`, `WarningIcon`, `ConfirmDialog`
 
 ---
 
@@ -242,13 +242,13 @@ Each rotation is a collapsible card. Collapsed view shows summary: `Wards — co
 1. Name input
 2. Coverage [min]–[max] pair (MinMaxInput)
 3. Groups tag input (optional)
-4. Rot Count — 3-way toggle: None / Same for all / Per group. "Per group" mode shows a dynamic list of group→[min,max] rows; group dropdown is populated from knownGroups and disabled with tooltip if no groups are defined.
+4. Rot Count — 3-way toggle: None / Same for all / Per group. "Per group" mode shows a dynamic list of group→[min,max] rows; group dropdown is populated from known resident groups and disabled with tooltip if no resident groups are defined.
 
 ### Residents
-Name input + group checkboxes (not free-text tags — residents must use group names defined elsewhere; checkboxes prevent typos). "Add multiple residents" button opens a textarea where users paste a line-per-name roster — bulk-creates ResidentDef rows.
+Name input + optional groups as free-text tags. Resident groups are defined directly on residents, and `rot_count` per-group uses the resident-group names already in use. "Add multiple residents" button opens a textarea where users paste a line-per-name roster — bulk-creates ResidentDef rows.
 
 ### Constraints (Prohibit)
-Two dropdowns per row: resident name + rotation name. Both populated from currently-defined names. If a referenced name is deleted, show `[Deleted: OldName]` in red.
+Two dropdowns per row: resident name + rotation name. Both populated from currently-defined names. If a referenced name is deleted, show `[Deleted: OldName]` in red. The UI remains a separate Constraints section, but generated YAML writes these rules under each resident's `prohibit:` list.
 
 ---
 
@@ -292,7 +292,7 @@ frontend/
     │   └── validate.ts      # pure: ScheduleState → ValidationWarning[]
     ├── utils/
     │   ├── nanoid.ts
-    │   └── deriveGroups.ts  # deriveKnownGroups(state) → string[]
+    │   └── deriveGroups.ts  # derive resident/block/rotation groups from state
     └── components/
         ├── layout/
         │   ├── Header.tsx
@@ -302,7 +302,6 @@ frontend/
         ├── shared/
         │   ├── SectionPanel.tsx      # Headless UI Disclosure wrapper
         │   ├── GroupTagsInput.tsx
-        │   ├── GroupCheckboxes.tsx
         │   ├── MinMaxInput.tsx
         │   ├── AddItemButton.tsx
         │   ├── DeleteRowButton.tsx
@@ -355,7 +354,7 @@ export default defineConfig({
 6. Layout shell: Header, MainLayout, YamlPreviewPanel (static)
 7. Wire App.tsx — state → useMemo for yaml and warnings → verify live preview
 8. **BlocksSection** end-to-end (establishes the pattern)
-9. **ResidentsSection** (introduces GroupCheckboxes + BulkAdd)
+9. **ResidentsSection** (introduces BulkAdd)
 10. **RotationsSection** (introduces RotCountEditor complexity)
 11. **ConstraintsSection**
 12. ValidationBanner + warning badges on section headers

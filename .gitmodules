@@ -1,0 +1,3 @@
+[submodule "schedulomicon"]
+	path = schedulomicon
+	url = git@github.com:justinrporter/schedulomicon.git

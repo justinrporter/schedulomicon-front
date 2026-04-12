@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    font-family: 'Public Sans', sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(241, 217, 174, 0.28), transparent 32%),
+      radial-gradient(circle at top right, rgba(64, 109, 122, 0.16), transparent 28%),
+      linear-gradient(180deg, #f8f3ea 0%, #f1e7d5 100%);
+    color: #173442;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-transparent text-slate-800;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply m-0 font-display text-ink;
+  }
+
+  p {
+    @apply m-0;
+  }
+}
+
+@layer components {
+  .panel-shell {
+    @apply rounded-[1.5rem] border shadow-brass backdrop-blur;
+    border-color: rgb(255 255 255 / 0.65);
+    background-color: rgb(255 255 255 / 0.82);
+  }
+
+  .section-card {
+    @apply rounded-[1.25rem] border border-[#dfd1b8] bg-[#fcf7ee] p-4 shadow-sm;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border-[#cab898] px-3 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-ink focus:ring-2 focus:ring-[#173442] focus:ring-opacity-20;
+    background-color: rgb(255 255 255 / 0.9);
+  }
+
+  .field-label {
+    @apply mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#6a5b46];
+  }
+
+  .ghost-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-[#cfbf9f] px-4 py-2 text-sm font-semibold text-ink transition hover:border-brass hover:text-brass;
+    background-color: rgb(255 255 255 / 0.7);
+  }
+
+  .primary-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#224555];
+  }
+
+  .danger-button {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-rust px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#94361e];
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-[#d6c7ab] bg-[#fffaf0] px-3 py-1 text-sm font-medium text-[#5c4f3b];
+  }
+
+  .empty-state {
+    @apply rounded-[1.25rem] border border-dashed border-[#cfbf9f] bg-[#fff8eb] px-5 py-6 text-sm text-[#6d6048];
+  }
+}

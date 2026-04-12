@@ -202,6 +202,33 @@ export default function App() {
           <FormColumn>
             <ValidationBanner warnings={warnings} />
 
+            <ResidentsSection
+              residents={state.residents}
+              warnings={warnings}
+              onAdd={() => updateResidents([...state.residents, createResident()])}
+              onBulkAdd={(names) =>
+                updateResidents([
+                  ...state.residents,
+                  ...names.map((name) => ({
+                    ...createResident(),
+                    name,
+                  })),
+                ])
+              }
+              onChange={(nextResident) =>
+                updateResidents(
+                  state.residents.map((resident) =>
+                    resident.id === nextResident.id ? nextResident : resident,
+                  ),
+                )
+              }
+              onDelete={(residentId) =>
+                updateResidents(
+                  state.residents.filter((resident) => resident.id !== residentId),
+                )
+              }
+            />
+
             <BlocksSection
               blocks={state.blocks}
               warnings={warnings}
@@ -233,33 +260,6 @@ export default function App() {
               onDelete={(rotationId) =>
                 updateRotations(
                   state.rotations.filter((rotation) => rotation.id !== rotationId),
-                )
-              }
-            />
-
-            <ResidentsSection
-              residents={state.residents}
-              warnings={warnings}
-              onAdd={() => updateResidents([...state.residents, createResident()])}
-              onBulkAdd={(names) =>
-                updateResidents([
-                  ...state.residents,
-                  ...names.map((name) => ({
-                    ...createResident(),
-                    name,
-                  })),
-                ])
-              }
-              onChange={(nextResident) =>
-                updateResidents(
-                  state.residents.map((resident) =>
-                    resident.id === nextResident.id ? nextResident : resident,
-                  ),
-                )
-              }
-              onDelete={(residentId) =>
-                updateResidents(
-                  state.residents.filter((resident) => resident.id !== residentId),
                 )
               }
             />

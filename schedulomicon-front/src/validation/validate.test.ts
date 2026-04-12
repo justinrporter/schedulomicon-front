@@ -105,4 +105,72 @@ describe('validate', () => {
       ),
     ).toBe(true)
   })
+
+  it('flags missing names, partial coverage, invalid flat rot_count, and bad rotation references', () => {
+    const state: ScheduleState = {
+      blocks: [{ id: 'b1', name: '   ', groups: [] }],
+      rotations: [
+        {
+          id: 'r1',
+          name: ' ICU ',
+          coverageMin: 1,
+          coverageMax: '',
+          groups: [],
+          rotCountMode: 'flat',
+          rotCountFlat: { min: 5, max: 2 },
+          rotCountPerGroup: [],
+        },
+        {
+          id: 'r2',
+          name: 'ICU',
+          coverageMin: '',
+          coverageMax: '',
+          groups: [],
+          rotCountMode: 'none',
+          rotCountFlat: { min: '', max: '' },
+          rotCountPerGroup: [],
+        },
+      ],
+      residents: [
+        { id: 'res1', name: 'Alice', groups: [] },
+        { id: 'res2', name: 'Alice', groups: ['sr'] },
+        { id: 'res3', name: '', groups: [] },
+      ],
+      prohibitions: [
+        { id: 'p1', residentName: 'Alice', rotationName: 'ICU' },
+        { id: 'p2', residentName: 'Alice', rotationName: 'Deleted' },
+      ],
+    }
+
+    const warnings = validate(state)
+
+    expect(warnings.some((warning) => warning.message.includes('Name is required.'))).toBe(
+      true,
+    )
+    expect(
+      warnings.some((warning) =>
+        warning.message.includes('Coverage is partially filled and will be omitted'),
+      ),
+    ).toBe(true)
+    expect(
+      warnings.some((warning) =>
+        warning.message.includes('Rotation count minimum cannot be greater than maximum'),
+      ),
+    ).toBe(true)
+    expect(
+      warnings.some((warning) =>
+        warning.message.includes('duplicate rotation name "ICU"'),
+      ),
+    ).toBe(true)
+    expect(
+      warnings.some((warning) =>
+        warning.message.includes('deleted rotation "Deleted"'),
+      ),
+    ).toBe(true)
+    expect(
+      warnings.some((warning) =>
+        warning.message.includes('duplicate resident name "Alice"'),
+      ),
+    ).toBe(true)
+  })
 })

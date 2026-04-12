@@ -1,0 +1,160 @@
+# Schedulomicon Front
+
+Schedulomicon Front is a static React app for building [Schedulomicon](./schedulomicon/) YAML without hand-authoring the full solver configuration.
+
+It is aimed at residency schedulers who need a safer way to define blocks, rotations, residents, and basic assignment prohibitions, then export solver-ready YAML for the Python scheduler.
+
+The frontend is built with React, TypeScript, Vite, and Tailwind CSS.
+
+## Why This Exists
+
+The underlying Schedulomicon solver is flexible, but writing the YAML by hand is easy to get wrong. This frontend lowers that barrier with a browser-based form, live validation, and a live YAML preview.
+
+Everything runs locally in the browser:
+
+- no backend
+- no database
+- no account system
+- drafts persist in `localStorage`
+
+## Current Scope
+
+The builder currently supports:
+
+- blocks with names and optional groups
+- rotations with names, coverage ranges, optional groups, and optional `rot_count`
+- `rot_count` in flat or per-resident-group form
+- residents with names and optional groups
+- resident-to-rotation prohibitions
+- live YAML preview
+- copy/download YAML
+- validation for duplicate names, invalid ranges, stale prohibitions, and related input issues
+
+The builder intentionally does not expose the full solver schema yet. Advanced features such as vacation, backup, cooldowns, prerequisites, group constraints, and selector DSL authoring still require manual YAML edits after export.
+
+## Example Output
+
+```yaml
+blocks:
+  July:
+    groups:
+      - summer
+rotations:
+  ICU:
+    coverage:
+      - 1
+      - 2
+    groups:
+      - critical
+    rot_count:
+      sr:
+        - 1
+        - 2
+residents:
+  Alice:
+    groups:
+      - sr
+    prohibit:
+      - ICU
+  Bob:
+    groups:
+      - sr
+```
+
+## Repo Layout
+
+```text
+.
+├── schedulomicon-front/   # React + TypeScript + Vite app
+├── schedulomicon/         # Python solver submodule
+└── react-frontend-plan.md # original implementation notes
+```
+
+The frontend app lives in `schedulomicon-front/`. Most commands below should be run from that directory.
+
+## Getting Started
+
+### Prerequisites
+
+- a recent Node.js + npm setup
+- Python 3, only if you want to run the parser compatibility test
+
+### Clone The Repo
+
+```bash
+git clone <repo-url>
+cd <repo-root>
+git submodule update --init --recursive
+```
+
+Note: the solver is included as a git submodule in `schedulomicon/`.
+
+### Run The Frontend
+
+```bash
+cd schedulomicon-front
+npm install
+npm run dev
+```
+
+Then open the local Vite URL shown in the terminal.
+
+## Quality Checks
+
+From `schedulomicon-front/`:
+
+```bash
+npm run lint
+npm run build
+```
+
+Note: the current `npm test` suite exercises the parser compatibility test described below, so it requires the Python setup in the next section.
+
+## Parser Compatibility Test
+
+The repo includes a parser sanity check that generates YAML from the frontend and verifies that the current Python parser accepts it.
+
+From `schedulomicon-front/`:
+
+```bash
+python3 -m venv .venv
+./.venv/bin/python -m pip install --upgrade pip
+./.venv/bin/pip install numpy pandas pyyaml pyparsing
+npm run test:parser
+```
+
+Why this setup is a little unusual:
+
+- the solver submodule currently declares `python_requires <3.11`
+- the parser test avoids `pip install -e ../schedulomicon`
+- instead, it installs only lightweight parsing dependencies and imports the submodule directly via `PYTHONPATH`
+
+If you already have a suitable interpreter elsewhere, set `SCHEDULOMICON_PYTHON=/path/to/python` before running `npm run test:parser`.
+
+## Deployment
+
+This is a static app with no backend. A production build is created with:
+
+```bash
+cd schedulomicon-front
+npm run build
+```
+
+The generated assets land in `schedulomicon-front/dist/` and can be hosted on GitHub Pages, Netlify, Vercel, or any other static host. The Vite `base` is configured as `./` to support generic static hosting.
+
+## Notes For Contributors
+
+- Keep YAML generation and validation logic pure and testable.
+- If you change emitted YAML shape or validation behavior, run `npm test`. Use `npm run test:parser` when you want to target the parser compatibility check directly.
+- Generated `groups` should always remain YAML arrays, even for a single group, to avoid parser compatibility issues in the current solver.
+- The `schedulomicon/` submodule may have its own in-progress work; do not assume it is safe to reset.
+
+## Roadmap
+
+Likely next additions:
+
+- YAML import
+- expert-mode editing for advanced solver fields
+- vacation and backup UI
+- saved-state import/export
+- tighter solver-backed workflows

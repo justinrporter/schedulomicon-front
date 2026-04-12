@@ -20,6 +20,7 @@ Schedulomicon is a constraint-based medical resident rotation scheduler. Users w
 | Icons | **@heroicons/react** | Same team as Tailwind; covers all needed icons |
 | YAML serialization | **js-yaml** | Battle-tested; `dump()` with `lineWidth: -1` prevents wrapping |
 | State | Plain `useState` in App.tsx | No async, no complexity — Redux/Zustand are overkill |
+| Testing | **Vitest** | Unit tests for YAML generation and validation only |
 | Routing | None | Single-page tool |
 
 **Install commands:**
@@ -27,7 +28,7 @@ Schedulomicon is a constraint-based medical resident rotation scheduler. Users w
 npm create vite@latest frontend -- --template react-ts
 cd frontend
 npm install js-yaml @headlessui/react @heroicons/react
-npm install -D tailwindcss @tailwindcss/forms autoprefixer postcss @types/js-yaml
+npm install -D tailwindcss @tailwindcss/forms autoprefixer postcss @types/js-yaml vitest
 npx tailwindcss init -p
 ```
 
@@ -169,9 +170,10 @@ Pure function — no React, no hooks. `(state: ScheduleState) => string`
 
 **Key behaviors:**
 - Blocks/residents with no groups serialize as `Name:` (null in js-yaml = correct empty YAML map)
-- Rotations with incomplete coverage (one field blank) are included but will trigger a validation warning
-- `rot_count` omitted entirely when mode is "none"
-- `rot_count: [min, max]` for flat mode; `rot_count: { groupName: [min, max], ... }` for per-group mode
+- Non-empty `groups` serialize as YAML arrays, even for a single group
+- Rotations with incomplete coverage (one field blank) trigger a validation warning and omit `coverage` from generated YAML
+- `rot_count` omitted entirely when mode is "none" or when its current value is incomplete
+- `rot_count: [min, max]` for flat mode; `rot_count: { groupName: [min, max], ... }` for per-group mode, omitting incomplete or duplicate per-group entries
 - Empty state returns `# Fill in the form to generate YAML\n`
 - Called via `useMemo` in App.tsx
 
@@ -193,8 +195,10 @@ Pure function — `(state: ScheduleState) => ValidationWarning[]`
 | Coverage min > max | error |
 | rot_count min > max | error |
 | Coverage partially filled (one field blank) | warning |
+| Duplicate rot_count group within one rotation | error |
 | rot_count references group not in known resident groups | warning |
 | Prohibition references deleted resident/rotation | error |
+| Prohibition references duplicate resident/rotation names | error |
 | Duplicate prohibition (same resident + rotation pair) | warning |
 
 **Display strategy:**
@@ -248,11 +252,13 @@ Each rotation is a collapsible card. Collapsed view shows summary: `Wards — co
 Name input + optional groups as free-text tags. Resident groups are defined directly on residents, and `rot_count` per-group uses the resident-group names already in use. "Add multiple residents" button opens a textarea where users paste a line-per-name roster — bulk-creates ResidentDef rows.
 
 ### Constraints (Prohibit)
-Two dropdowns per row: resident name + rotation name. Both populated from currently-defined names. If a referenced name is deleted, show `[Deleted: OldName]` in red. The UI remains a separate Constraints section, but generated YAML writes these rules under each resident's `prohibit:` list.
+Two dropdowns per row: resident name + rotation name. Both populated from currently-defined names. If a referenced name is deleted, show `[Deleted: OldName]` in red. The UI remains a separate Constraints section, but generated YAML writes these rules under each resident's `prohibit:` list and omits rules whose resident or rotation cannot be resolved uniquely.
 
 ---
 
 ## Download
+
+Download remains available when warnings or errors exist; generated YAML omits incomplete or ambiguous data rather than emitting invalid or lossy entries.
 
 ```typescript
 function downloadYaml(yamlString: string) {
@@ -348,8 +354,8 @@ export default defineConfig({
 
 1. Scaffold Vite + configure Tailwind — blank page renders
 2. Define `types.ts` and `initialState.ts`
-3. Write `generateYaml.ts` (pure, verify independently)
-4. Write `validate.ts` (pure, verify independently)
+3. Write `generateYaml.ts` (pure, verify independently with Vitest)
+4. Write `validate.ts` (pure, verify independently with Vitest)
 5. Build `usePersistedState.ts`
 6. Layout shell: Header, MainLayout, YamlPreviewPanel (static)
 7. Wire App.tsx — state → useMemo for yaml and warnings → verify live preview

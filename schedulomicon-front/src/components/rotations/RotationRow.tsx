@@ -70,7 +70,7 @@ export function RotationRow({
     <Disclosure defaultOpen={warnings.length > 0 || !normalizeText(rotation.name)}>
       {({ open }) => (
         <div className="section-card overflow-hidden p-0">
-          <div className="flex items-start justify-between gap-3 border-b border-[#e6d9c1] px-4 py-4">
+          <div className="flex items-start justify-between gap-3 border-b border-[#e6d9c1] px-4 py-3.5">
             <DisclosureButton className="flex min-w-0 flex-1 items-start gap-3 text-left">
               <span className="rounded-full bg-[#ede2ca] p-2 text-[#7c653d]">
                 <DocumentTextIcon className="h-5 w-5" />
@@ -94,7 +94,7 @@ export function RotationRow({
             <DeleteRowButton className="mt-1" onClick={onDelete} />
           </div>
 
-          <DisclosurePanel className="space-y-4 px-4 py-5">
+          <DisclosurePanel className="space-y-3.5 px-4 py-4">
             <RotationFields
               rotation={rotation}
               residentGroups={residentGroups}
@@ -102,12 +102,9 @@ export function RotationRow({
             />
 
             {warnings.length > 0 ? (
-              <ul className="space-y-2">
+              <ul className="space-y-1.5">
                 {warnings.map((warning) => (
-                  <li
-                    key={warning.id}
-                    className="flex items-start gap-2 rounded-2xl bg-white px-3 py-2 text-sm text-[#6f5634]"
-                  >
+                  <li key={warning.id} className="entry-warning">
                     <WarningIcon
                       warning={warning}
                       className="mt-0.5 h-4 w-4 shrink-0"

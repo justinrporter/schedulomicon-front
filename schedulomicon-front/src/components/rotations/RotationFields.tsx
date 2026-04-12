@@ -15,9 +15,9 @@ export function RotationFields({
   onChange,
 }: RotationFieldsProps) {
   return (
-    <div className="space-y-5">
-      <label className="block">
-        <span className="field-label">Rotation Name</span>
+    <div className="space-y-4">
+      <label className="inline-field-row">
+        <span className="inline-field-label">Rotation Name</span>
         <input
           type="text"
           className="input-field"
@@ -32,38 +32,39 @@ export function RotationFields({
         />
       </label>
 
-      <div>
-        <span className="field-label">Coverage Per Block</span>
-        <MinMaxInput
-          minValue={rotation.coverageMin}
-          maxValue={rotation.coverageMax}
-          onMinChange={(coverageMin) =>
-            onChange({
-              ...rotation,
-              coverageMin,
-            })
-          }
-          onMaxChange={(coverageMax) =>
-            onChange({
-              ...rotation,
-              coverageMax,
-            })
-          }
-        />
-      </div>
+      <MinMaxInput
+        variant="addon"
+        label="Coverage"
+        minValue={rotation.coverageMin}
+        maxValue={rotation.coverageMax}
+        onMinChange={(coverageMin) =>
+          onChange({
+            ...rotation,
+            coverageMin,
+          })
+        }
+        onMaxChange={(coverageMax) =>
+          onChange({
+            ...rotation,
+            coverageMax,
+          })
+        }
+      />
 
-      <div>
-        <span className="field-label">Rotation Groups</span>
-        <GroupTagsInput
-          tags={rotation.groups}
-          placeholder="critical, inpatient"
-          onChange={(groups) =>
-            onChange({
-              ...rotation,
-              groups,
-            })
-          }
-        />
+      <div className="space-y-2 md:flex md:items-start md:gap-3 md:space-y-0">
+        <span className="inline-field-label pt-3">Rotation Groups</span>
+        <div className="min-w-0 flex-1">
+          <GroupTagsInput
+            tags={rotation.groups}
+            placeholder="critical, inpatient"
+            onChange={(groups) =>
+              onChange({
+                ...rotation,
+                groups,
+              })
+            }
+          />
+        </div>
       </div>
 
       <RotCountEditor

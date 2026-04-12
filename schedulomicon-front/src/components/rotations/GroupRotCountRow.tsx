@@ -16,15 +16,14 @@ export function GroupRotCountRow({
   onDelete,
 }: GroupRotCountRowProps) {
   const hasCurrentValue = entry.group.length > 0
-  const isDeletedGroup =
-    hasCurrentValue && !residentGroups.includes(entry.group)
+  const isDeletedGroup = hasCurrentValue && !residentGroups.includes(entry.group)
 
   return (
-    <div className="rounded-2xl border border-[#e1d4be] bg-white/80 p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1 space-y-4">
-          <label className="block">
-            <span className="field-label">Resident Group</span>
+    <div className="rounded-xl border border-[#e1d4be] bg-white/80 p-3">
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1 space-y-3">
+          <label className="inline-field-row">
+            <span className="inline-field-label">Resident Group</span>
             <select
               className="input-field"
               value={entry.group}
@@ -53,6 +52,7 @@ export function GroupRotCountRow({
           </label>
 
           <MinMaxInput
+            variant="addon"
             minValue={entry.min}
             maxValue={entry.max}
             onMinChange={(min) =>
@@ -70,8 +70,8 @@ export function GroupRotCountRow({
           />
         </div>
 
-        <div className="pt-7">
-          <DeleteRowButton onClick={onDelete} />
+        <div className="shrink-0 pt-0.5">
+          <DeleteRowButton size="compact" onClick={onDelete} />
         </div>
       </div>
     </div>

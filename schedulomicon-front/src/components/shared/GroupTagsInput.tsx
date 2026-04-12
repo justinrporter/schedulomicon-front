@@ -32,7 +32,7 @@ export function GroupTagsInput({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
         {tags.length === 0 ? (
           <p className="text-sm text-[#7b6b52]">

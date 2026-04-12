@@ -22,7 +22,7 @@ export function RotCountEditor({
   onChange,
 }: RotCountEditorProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div>
         <span className="field-label">Rotation Count</span>
         <div className="flex flex-wrap gap-2">
@@ -30,7 +30,7 @@ export function RotCountEditor({
             <button
               key={mode.value}
               type="button"
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              className={`rounded-full px-3.5 py-1.5 text-sm font-semibold transition ${
                 rotation.rotCountMode === mode.value
                   ? 'bg-ink text-white'
                   : 'border border-[#d3c3a7] bg-white/70 text-ink hover:border-brass hover:text-brass'
@@ -49,8 +49,9 @@ export function RotCountEditor({
       </div>
 
       {rotation.rotCountMode === 'flat' ? (
-        <div className="rounded-2xl border border-[#e1d4be] bg-white/80 p-4">
+        <div className="rounded-xl border border-[#e1d4be] bg-white/80 p-3">
           <MinMaxInput
+            variant="addon"
             minValue={rotation.rotCountFlat.min}
             maxValue={rotation.rotCountFlat.max}
             onMinChange={(min) =>
@@ -76,7 +77,7 @@ export function RotCountEditor({
       ) : null}
 
       {rotation.rotCountMode === 'per-group' ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {residentGroups.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#cfbf9f] bg-[#fff8eb] px-4 py-4 text-sm text-[#6f6046]">
               Define at least one resident group before adding per-group rotation

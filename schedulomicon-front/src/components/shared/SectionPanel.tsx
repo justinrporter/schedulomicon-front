@@ -11,7 +11,7 @@ import type { ReactNode } from 'react'
 
 interface SectionPanelProps {
   title: string
-  description: string
+  description?: string
   warningCount?: number
   actions?: ReactNode
   children: ReactNode
@@ -48,7 +48,9 @@ export function SectionPanel({
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-1 block text-sm text-[#75674d]">{description}</span>
+                  {description ? (
+                    <span className="mt-1 block text-sm text-[#75674d]">{description}</span>
+                  ) : null}
                 </span>
               </DisclosureButton>
 

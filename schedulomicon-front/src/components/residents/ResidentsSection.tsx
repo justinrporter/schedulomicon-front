@@ -25,7 +25,6 @@ export function ResidentsSection({
   return (
     <SectionPanel
       title="Residents"
-      description="Capture the roster, then optionally assign each resident to one or more groups."
       warningCount={getSectionWarningCount(warnings, 'residents')}
       actions={
         <BulkAddNamesButton

@@ -27,7 +27,6 @@ export function RotationsSection({
   return (
     <SectionPanel
       title="Rotations"
-      description="Set baseline coverage, optional rotation groups, and any schedule-wide rotation count limits."
       warningCount={getSectionWarningCount(warnings, 'rotations')}
       actions={
         <BulkAddNamesButton

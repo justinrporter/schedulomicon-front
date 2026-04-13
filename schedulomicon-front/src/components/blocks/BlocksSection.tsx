@@ -25,7 +25,6 @@ export function BlocksSection({
   return (
     <SectionPanel
       title="Blocks"
-      description="Define the time periods in your schedule. Groups are optional."
       warningCount={getSectionWarningCount(warnings, 'blocks')}
       actions={
         <BulkAddNamesButton

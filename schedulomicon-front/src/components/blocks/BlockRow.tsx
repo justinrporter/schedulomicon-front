@@ -1,9 +1,17 @@
 import type { BlockDef, BlockParam, ValidationWarning } from '../../types'
 import { createGroupsParam } from '../../state/factories'
 import { hasParam } from '../../state/paramHelpers'
-import { DeleteRowButton } from '../shared/DeleteRowButton'
+import { normalizeText } from '../../utils/strings'
+import {
+  getTargetWarnings,
+  getWarningState,
+} from '../../utils/warnings'
+import {
+  getAriaInvalid,
+  getInputValidationClass,
+} from '../../utils/validationUi'
+import { CollapsibleEntryCard } from '../shared/CollapsibleEntryCard'
 import { ParameterAddSelect } from '../shared/ParameterAddSelect'
-import { WarningIcon } from '../shared/WarningIcon'
 import { BlockParameterRow } from './BlockParameterRow'
 
 interface BlockRowProps {
@@ -16,6 +24,8 @@ interface BlockRowProps {
 export function BlockRow({ block, warnings, onChange, onDelete }: BlockRowProps) {
   const params = block.parameters
   const groupsPresent = hasParam(params, 'groups')
+  const nameState = getWarningState(getTargetWarnings(warnings, { field: 'name' }))
+  const cardState = getWarningState(warnings)
 
   function addParam(kind: string) {
     let newParam: BlockParam
@@ -44,29 +54,27 @@ export function BlockRow({ block, warnings, onChange, onDelete }: BlockRowProps)
   }
 
   return (
-    <div className="entry-card space-y-3">
-      <div className="flex items-start gap-3">
-        <label className="inline-field-row flex-1">
-          <span className="inline-field-label md:w-24">Block Name</span>
-          <input
-            type="text"
-            className="input-field"
-            value={block.name}
-            placeholder="July"
-            onChange={(event) =>
-              onChange({
-                ...block,
-                name: event.target.value,
-              })
-            }
-          />
-        </label>
-
-        <div className="flex shrink-0 items-center gap-2 pt-0.5">
-          {warnings[0] ? <WarningIcon warning={warnings[0]} className="h-4 w-4" /> : null}
-          <DeleteRowButton size="compact" onClick={onDelete} />
-        </div>
-      </div>
+    <CollapsibleEntryCard
+      title={normalizeText(block.name) || 'Untitled Block'}
+      validationState={cardState}
+      onDelete={onDelete}
+    >
+      <label className="inline-field-row">
+        <span className="inline-field-label md:w-24">Block Name</span>
+        <input
+          type="text"
+          className={`input-field ${getInputValidationClass(nameState)}`}
+          value={block.name}
+          placeholder="July"
+          aria-invalid={getAriaInvalid(nameState)}
+          onChange={(event) =>
+            onChange({
+              ...block,
+              name: event.target.value,
+            })
+          }
+        />
+      </label>
 
       {params.length > 0 && (
         <div className="space-y-2">
@@ -74,6 +82,7 @@ export function BlockRow({ block, warnings, onChange, onDelete }: BlockRowProps)
             <BlockParameterRow
               key={param.id}
               param={param}
+              warnings={warnings}
               onChange={(next) => updateParam(param.id, next)}
               onDelete={() => deleteParam(param.id)}
             />
@@ -87,17 +96,6 @@ export function BlockRow({ block, warnings, onChange, onDelete }: BlockRowProps)
         ]}
         onAdd={addParam}
       />
-
-      {warnings.length > 0 ? (
-        <ul className="space-y-1.5">
-          {warnings.map((warning) => (
-            <li key={warning.id} className="entry-warning">
-              <WarningIcon warning={warning} className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{warning.message}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
+    </CollapsibleEntryCard>
   )
 }

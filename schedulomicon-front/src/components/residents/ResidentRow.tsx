@@ -6,9 +6,17 @@ import {
   createSumGtZeroParam,
 } from '../../state/factories'
 import { hasParam } from '../../state/paramHelpers'
-import { DeleteRowButton } from '../shared/DeleteRowButton'
+import { normalizeText } from '../../utils/strings'
+import {
+  getTargetWarnings,
+  getWarningState,
+} from '../../utils/warnings'
+import {
+  getAriaInvalid,
+  getInputValidationClass,
+} from '../../utils/validationUi'
+import { CollapsibleEntryCard } from '../shared/CollapsibleEntryCard'
 import { ParameterAddSelect } from '../shared/ParameterAddSelect'
-import { WarningIcon } from '../shared/WarningIcon'
 import { ResidentParameterRow } from './ResidentParameterRow'
 
 interface ResidentRowProps {
@@ -26,6 +34,8 @@ export function ResidentRow({
 }: ResidentRowProps) {
   const params = resident.parameters
   const groupsPresent = hasParam(params, 'groups')
+  const nameState = getWarningState(getTargetWarnings(warnings, { field: 'name' }))
+  const cardState = getWarningState(warnings)
 
   function addParam(kind: string) {
     let newParam: ResidentParam
@@ -63,29 +73,27 @@ export function ResidentRow({
   }
 
   return (
-    <div className="entry-card space-y-3">
-      <div className="flex items-start gap-3">
-        <label className="inline-field-row flex-1">
-          <span className="inline-field-label">Resident Name</span>
-          <input
-            type="text"
-            className="input-field"
-            value={resident.name}
-            placeholder="Dr. Avery Taylor"
-            onChange={(event) =>
-              onChange({
-                ...resident,
-                name: event.target.value,
-              })
-            }
-          />
-        </label>
-
-        <div className="flex shrink-0 items-center gap-2 pt-0.5">
-          {warnings[0] ? <WarningIcon warning={warnings[0]} className="h-4 w-4" /> : null}
-          <DeleteRowButton size="compact" onClick={onDelete} />
-        </div>
-      </div>
+    <CollapsibleEntryCard
+      title={normalizeText(resident.name) || 'Untitled Resident'}
+      validationState={cardState}
+      onDelete={onDelete}
+    >
+      <label className="inline-field-row">
+        <span className="inline-field-label">Resident Name</span>
+        <input
+          type="text"
+          className={`input-field ${getInputValidationClass(nameState)}`}
+          value={resident.name}
+          placeholder="Dr. Avery Taylor"
+          aria-invalid={getAriaInvalid(nameState)}
+          onChange={(event) =>
+            onChange({
+              ...resident,
+              name: event.target.value,
+            })
+          }
+        />
+      </label>
 
       {params.length > 0 && (
         <div className="space-y-2">
@@ -93,6 +101,7 @@ export function ResidentRow({
             <ResidentParameterRow
               key={param.id}
               param={param}
+              warnings={warnings}
               onChange={(next) => updateParam(param.id, next)}
               onDelete={() => deleteParam(param.id)}
             />
@@ -109,17 +118,6 @@ export function ResidentRow({
         ]}
         onAdd={addParam}
       />
-
-      {warnings.length > 0 ? (
-        <ul className="space-y-1.5">
-          {warnings.map((warning) => (
-            <li key={warning.id} className="entry-warning">
-              <WarningIcon warning={warning} className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{warning.message}</span>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
+    </CollapsibleEntryCard>
   )
 }

@@ -8,11 +8,27 @@ import { startTransition, useMemo, useState } from 'react'
 
 import { normalizeText } from '../../utils/strings'
 
-interface BulkAddResidentsProps {
+interface BulkAddNamesButtonProps {
+  dialogTitle: string
+  description: string
+  textareaLabel: string
+  placeholder: string
+  itemLabelSingular: string
+  itemLabelPlural: string
+  submitLabel: string
   onAdd: (names: string[]) => void
 }
 
-export function BulkAddResidents({ onAdd }: BulkAddResidentsProps) {
+export function BulkAddNamesButton({
+  dialogTitle,
+  description,
+  textareaLabel,
+  placeholder,
+  itemLabelSingular,
+  itemLabelPlural,
+  submitLabel,
+  onAdd,
+}: BulkAddNamesButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [draft, setDraft] = useState('')
 
@@ -49,27 +65,23 @@ export function BulkAddResidents({ onAdd }: BulkAddResidentsProps) {
         <div className="fixed inset-0 bg-[#173442]/40 backdrop-blur-sm" aria-hidden="true" />
         <div className="fixed inset-0 flex items-center justify-center p-4">
           <DialogPanel className="panel-shell w-full max-w-2xl p-6">
-            <DialogTitle className="text-2xl font-semibold">
-              Bulk Add Residents
-            </DialogTitle>
-            <p className="mt-3 text-sm leading-6 text-[#6d6048]">
-              Paste one resident name per line. Blank lines are ignored and leading
-              or trailing spaces are trimmed.
-            </p>
+            <DialogTitle className="text-2xl font-semibold">{dialogTitle}</DialogTitle>
+            <p className="mt-3 text-sm leading-6 text-[#6d6048]">{description}</p>
 
             <label className="mt-5 block">
-              <span className="field-label">Roster</span>
+              <span className="field-label">{textareaLabel}</span>
               <textarea
                 rows={12}
                 className="input-field min-h-[14rem] resize-y font-mono text-sm"
                 value={draft}
-                placeholder={'Taylor, Avery\nPatel, Maya\nChen, Jordan'}
+                placeholder={placeholder}
                 onChange={(event) => setDraft(event.target.value)}
               />
             </label>
 
             <p className="mt-3 text-sm text-[#7b6b52]">
-              {parsedNames.length} resident{parsedNames.length === 1 ? '' : 's'} ready to add
+              {parsedNames.length}{' '}
+              {parsedNames.length === 1 ? itemLabelSingular : itemLabelPlural} ready to add
             </p>
 
             <div className="mt-6 flex flex-wrap justify-end gap-3">
@@ -82,7 +94,7 @@ export function BulkAddResidents({ onAdd }: BulkAddResidentsProps) {
                 disabled={parsedNames.length === 0}
                 onClick={handleSubmit}
               >
-                Add Residents
+                {submitLabel}
               </button>
             </div>
           </DialogPanel>

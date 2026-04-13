@@ -350,6 +350,93 @@ describe('generateYaml', () => {
     expect(output).not.toContain('sum ==')
   })
 
+  it('omits blank-name entities even when empty params have been added', () => {
+    const state: ScheduleState = {
+      blocks: [
+        {
+          id: 'b1',
+          name: '',
+          parameters: [{ id: 'bg1', kind: 'groups', values: [] }],
+        },
+        {
+          id: 'b2',
+          name: 'July',
+          parameters: [],
+        },
+      ],
+      rotations: [
+        {
+          id: 'r1',
+          name: ' ',
+          parameters: [{ id: 'cp1', kind: 'coverage', min: '', max: '' }],
+        },
+        {
+          id: 'r2',
+          name: 'ICU',
+          parameters: [],
+        },
+      ],
+      residents: [
+        {
+          id: 'res1',
+          name: '',
+          parameters: [{ id: 's1', kind: 'sum_eq_count', selector: '', count: '' }],
+        },
+        {
+          id: 'res2',
+          name: 'Alice',
+          parameters: [],
+        },
+      ],
+    }
+
+    const output = yaml.load(generateYaml(state)) as {
+      blocks: Record<string, unknown>
+      rotations: Record<string, unknown>
+      residents: Record<string, unknown>
+    }
+
+    expect(output.blocks).toEqual({ July: null })
+    expect(output.rotations).toEqual({ ICU: null })
+    expect(output.residents).toEqual({ Alice: null })
+  })
+
+  it('still omits meaningful but unnamed entities from YAML', () => {
+    const state: ScheduleState = {
+      blocks: [
+        {
+          id: 'b1',
+          name: '',
+          parameters: [{ id: 'bg1', kind: 'groups', values: ['sr'] }],
+        },
+      ],
+      rotations: [
+        {
+          id: 'r1',
+          name: '',
+          parameters: [{ id: 'cp1', kind: 'coverage', min: 1, max: '' }],
+        },
+      ],
+      residents: [
+        {
+          id: 'res1',
+          name: '',
+          parameters: [{ id: 's1', kind: 'sum_gt_zero', selector: 'ICU' }],
+        },
+      ],
+    }
+
+    const output = yaml.load(generateYaml(state)) as {
+      blocks: Record<string, unknown>
+      rotations: Record<string, unknown>
+      residents: Record<string, unknown>
+    }
+
+    expect(output.blocks).toEqual({})
+    expect(output.rotations).toEqual({})
+    expect(output.residents).toEqual({})
+  })
+
   it('never emits a prohibit key', () => {
     const state: ScheduleState = {
       blocks: [],

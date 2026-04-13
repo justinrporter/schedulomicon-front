@@ -4,8 +4,14 @@ import type {
   RotationParam,
   RotCountFlatParam,
   RotCountPerGroupParam,
+  ValidationWarning,
 } from '../../types'
 import { createRotCountEntry } from '../../state/factories'
+import {
+  getTargetWarnings,
+  getWarningState,
+} from '../../utils/warnings'
+import { getCardValidationClass } from '../../utils/validationUi'
 import { AddItemButton } from '../shared/AddItemButton'
 import { DeleteRowButton } from '../shared/DeleteRowButton'
 import { GroupTagsInput } from '../shared/GroupTagsInput'
@@ -15,6 +21,7 @@ import { GroupRotCountRow } from './GroupRotCountRow'
 interface RotationParameterRowProps {
   param: RotationParam
   residentGroups: string[]
+  warnings: ValidationWarning[]
   onChange: (next: RotationParam) => void
   onDelete: () => void
 }
@@ -22,11 +29,21 @@ interface RotationParameterRowProps {
 export function RotationParameterRow({
   param,
   residentGroups,
+  warnings,
   onChange,
   onDelete,
 }: RotationParameterRowProps) {
+  const paramWarnings = getTargetWarnings(warnings, { paramId: param.id })
+  const paramState = getWarningState(paramWarnings)
+  const groupsState = getWarningState(
+    getTargetWarnings(paramWarnings, { field: 'groups' }),
+  )
+  const rangeState = getWarningState(
+    getTargetWarnings(paramWarnings, { field: 'range' }),
+  )
+
   return (
-    <div className="rounded-xl border border-[#e1d4be] bg-white/80 p-3 space-y-3">
+    <div className={`rounded-xl border border-[#e1d4be] bg-white/80 p-3 space-y-3 ${getCardValidationClass(paramState)}`}>
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           {param.kind === 'groups' && (
@@ -35,6 +52,7 @@ export function RotationParameterRow({
               <GroupTagsInput
                 tags={(param as GroupsParam).values}
                 placeholder="critical, inpatient"
+                validationState={groupsState}
                 onChange={(values) =>
                   onChange({ ...(param as GroupsParam), values })
                 }
@@ -48,6 +66,7 @@ export function RotationParameterRow({
               label="Coverage"
               minValue={(param as CoverageParam).min}
               maxValue={(param as CoverageParam).max}
+              validationState={rangeState}
               onMinChange={(min) =>
                 onChange({ ...(param as CoverageParam), min })
               }
@@ -63,6 +82,7 @@ export function RotationParameterRow({
               label="Rotation Count (same for all)"
               minValue={(param as RotCountFlatParam).min}
               maxValue={(param as RotCountFlatParam).max}
+              validationState={rangeState}
               onMinChange={(min) =>
                 onChange({ ...(param as RotCountFlatParam), min })
               }
@@ -87,6 +107,7 @@ export function RotationParameterRow({
                   key={entry.id}
                   entry={entry}
                   residentGroups={residentGroups}
+                  warnings={paramWarnings}
                   onChange={(nextEntry) =>
                     onChange({
                       ...(param as RotCountPerGroupParam),

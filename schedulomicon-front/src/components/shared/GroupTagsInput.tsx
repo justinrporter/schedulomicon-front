@@ -2,19 +2,27 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
 
 import { normalizeText, uniqueTrimmedStrings } from '../../utils/strings'
+import {
+  getAriaInvalid,
+  getInputValidationClass,
+  type ValidationState,
+} from '../../utils/validationUi'
 
 interface GroupTagsInputProps {
   tags: string[]
   placeholder: string
   onChange: (nextTags: string[]) => void
+  validationState?: ValidationState
 }
 
 export function GroupTagsInput({
   tags,
   placeholder,
   onChange,
+  validationState,
 }: GroupTagsInputProps) {
   const [draft, setDraft] = useState('')
+  const inputValidationClass = getInputValidationClass(validationState)
 
   function commitDraft(rawValue: string) {
     const additions = rawValue
@@ -59,9 +67,10 @@ export function GroupTagsInput({
 
       <input
         type="text"
-        className="input-field"
+        className={`input-field ${inputValidationClass}`}
         value={draft}
         placeholder={placeholder}
+        aria-invalid={getAriaInvalid(validationState)}
         onBlur={() => commitDraft(draft)}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {

@@ -1,4 +1,11 @@
 export type NumericInput = number | ''
+export type ValidationField =
+  | 'name'
+  | 'groups'
+  | 'selector'
+  | 'count'
+  | 'group'
+  | 'range'
 
 export type SectionName =
   | 'blocks'
@@ -52,6 +59,9 @@ export interface ValidationWarning {
   id: string
   section: SectionName
   itemId?: string
+  paramId?: string
+  entryId?: string
+  field?: ValidationField
   message: string
   severity: 'warning' | 'error'
 }

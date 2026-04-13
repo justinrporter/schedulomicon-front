@@ -1,8 +1,8 @@
 import type { ResidentDef, ValidationWarning } from '../../types'
 import { getItemWarnings, getSectionWarningCount } from '../../utils/warnings'
+import { BulkAddNamesButton } from '../shared/BulkAddNamesButton'
 import { ListFooterAddButton } from '../shared/ListFooterAddButton'
 import { SectionPanel } from '../shared/SectionPanel'
-import { BulkAddResidents } from './BulkAddResidents'
 import { ResidentRow } from './ResidentRow'
 
 interface ResidentsSectionProps {
@@ -27,7 +27,18 @@ export function ResidentsSection({
       title="Residents"
       description="Capture the roster, then optionally assign each resident to one or more groups."
       warningCount={getSectionWarningCount(warnings, 'residents')}
-      actions={<BulkAddResidents onAdd={onBulkAdd} />}
+      actions={
+        <BulkAddNamesButton
+          dialogTitle="Bulk Add Residents"
+          description="Paste one resident name per line. Blank lines are ignored and leading or trailing spaces are trimmed."
+          textareaLabel="Roster"
+          placeholder={'Taylor, Avery\nPatel, Maya\nChen, Jordan'}
+          itemLabelSingular="resident"
+          itemLabelPlural="residents"
+          submitLabel="Add Residents"
+          onAdd={onBulkAdd}
+        />
+      }
     >
       {residents.length === 0 ? (
         <div className="space-y-4">

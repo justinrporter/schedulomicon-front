@@ -1,6 +1,7 @@
 import type { BlockDef, ValidationWarning } from '../../types'
 import { getItemWarnings, getSectionWarningCount } from '../../utils/warnings'
-import { AddItemButton } from '../shared/AddItemButton'
+import { BulkAddNamesButton } from '../shared/BulkAddNamesButton'
+import { ListFooterAddButton } from '../shared/ListFooterAddButton'
 import { SectionPanel } from '../shared/SectionPanel'
 import { BlockRow } from './BlockRow'
 
@@ -8,6 +9,7 @@ interface BlocksSectionProps {
   blocks: BlockDef[]
   warnings: ValidationWarning[]
   onAdd: () => void
+  onBulkAdd: (names: string[]) => void
   onChange: (nextBlock: BlockDef) => void
   onDelete: (blockId: string) => void
 }
@@ -16,6 +18,7 @@ export function BlocksSection({
   blocks,
   warnings,
   onAdd,
+  onBulkAdd,
   onChange,
   onDelete,
 }: BlocksSectionProps) {
@@ -24,23 +27,39 @@ export function BlocksSection({
       title="Blocks"
       description="Define the time periods in your schedule. Groups are optional."
       warningCount={getSectionWarningCount(warnings, 'blocks')}
-      actions={<AddItemButton onClick={onAdd}>Add Block</AddItemButton>}
+      actions={
+        <BulkAddNamesButton
+          dialogTitle="Bulk Add Blocks"
+          description="Paste one block name per line. Blank lines are ignored and leading or trailing spaces are trimmed."
+          textareaLabel="Blocks"
+          placeholder={'July\nAugust\nBlock 1'}
+          itemLabelSingular="block"
+          itemLabelPlural="blocks"
+          submitLabel="Add Blocks"
+          onAdd={onBulkAdd}
+        />
+      }
     >
       {blocks.length === 0 ? (
-        <div className="empty-state">
-          Start with blocks like July, August, or Block 1 so the rest of the
-          schedule has a timeline to target.
+        <div className="space-y-4">
+          <div className="empty-state">
+            Add blocks one at a time or paste a list to generate rows in bulk.
+          </div>
+          <ListFooterAddButton tooltip="Add block" onClick={onAdd} />
         </div>
       ) : (
-        blocks.map((block) => (
-          <BlockRow
-            key={block.id}
-            block={block}
-            warnings={getItemWarnings(warnings, block.id)}
-            onChange={onChange}
-            onDelete={() => onDelete(block.id)}
-          />
-        ))
+        <div className="space-y-4">
+          {blocks.map((block) => (
+            <BlockRow
+              key={block.id}
+              block={block}
+              warnings={getItemWarnings(warnings, block.id)}
+              onChange={onChange}
+              onDelete={() => onDelete(block.id)}
+            />
+          ))}
+          <ListFooterAddButton tooltip="Add block" onClick={onAdd} />
+        </div>
       )}
     </SectionPanel>
   )

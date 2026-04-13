@@ -105,10 +105,15 @@ From `schedulomicon-front/`:
 
 ```bash
 npm run lint
+npm test
 npm run build
+npm run test:hosting
 ```
 
-Note: the current `npm test` suite exercises the parser compatibility test described below, so it requires the Python setup in the next section.
+Notes:
+
+- `npm test` includes the parser compatibility suite described below, so it requires the Python setup in the next section.
+- `npm run test:hosting` is intended to run after `npm run build` and verifies that the generated `dist/` artifact stays compatible with generic static hosts such as GitHub Pages.
 
 ## Parser Compatibility Test
 
@@ -138,9 +143,26 @@ This is a static app with no backend. A production build is created with:
 ```bash
 cd schedulomicon-front
 npm run build
+npm run test:hosting
 ```
 
-The generated assets land in `schedulomicon-front/dist/` and can be hosted on GitHub Pages, Netlify, Vercel, or any other static host. The Vite `base` is configured as `./` to support generic static hosting.
+The generated assets land in `schedulomicon-front/dist/` and can be hosted on GitHub Pages, Netlify, Vercel, or any other static host. The Vite `base` is configured as `./` to support generic static hosting and GitHub Pages project-site URLs.
+
+### GitHub Pages
+
+The repository now includes a GitHub Actions workflow at `.github/workflows/deploy-pages.yml`.
+
+Deployment behavior:
+
+- pull requests to `main` run lint, the full test suite, a production build, and the static-hosting artifact check
+- pushes to `main` run the same validation, then publish `schedulomicon-front/dist/` to GitHub Pages
+- manual redeploys are available through `workflow_dispatch`
+
+The workflow creates `schedulomicon-front/.venv` in CI so the parser compatibility tests run in the same isolated style recommended for local development.
+
+One-time repo setup on GitHub:
+
+- in `Settings -> Pages`, set `Source` to `GitHub Actions`
 
 ## Notes For Contributors
 

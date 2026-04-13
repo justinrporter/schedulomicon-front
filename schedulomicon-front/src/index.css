@@ -68,9 +68,25 @@
     @apply rounded-[1.1rem] border border-[#dfd1b8] bg-[#fcf7ee] px-3.5 py-3 shadow-sm;
   }
 
+  .validation-card-error {
+    @apply border-[#d9b0a6] bg-[#fff7f5];
+  }
+
+  .validation-card-warning {
+    @apply border-[#e3ca93] bg-[#fffaf2];
+  }
+
   .input-field {
     @apply w-full rounded-xl border-[#cab898] px-3 py-2.5 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-ink focus:ring-2 focus:ring-[#173442] focus:ring-opacity-20;
     background-color: rgb(255 255 255 / 0.9);
+  }
+
+  .validation-input-error {
+    @apply border-rust bg-[#fff6f3] placeholder:text-[#bc8f87] focus:border-rust focus:ring-[#b04a34] focus:ring-opacity-20;
+  }
+
+  .validation-input-warning {
+    @apply border-[#c3913d] bg-[#fff8ee] placeholder:text-[#aa946d] focus:border-[#a76a1d] focus:ring-[#a76a1d] focus:ring-opacity-20;
   }
 
   .field-label {

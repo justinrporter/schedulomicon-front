@@ -8,7 +8,6 @@ import { YamlPreviewPanel } from './components/layout/YamlPreviewPanel'
 import { ResidentsSection } from './components/residents/ResidentsSection'
 import { RotationsSection } from './components/rotations/RotationsSection'
 import { ConfirmDialog } from './components/shared/ConfirmDialog'
-import { ValidationBanner } from './components/shared/ValidationBanner'
 import { usePersistedState } from './hooks/usePersistedState'
 import {
   createBlock,
@@ -76,8 +75,6 @@ export default function App() {
       <MainLayout
         formColumn={
           <FormColumn>
-            <ValidationBanner warnings={warnings} />
-
             <ResidentsSection
               residents={state.residents}
               warnings={warnings}
@@ -109,6 +106,15 @@ export default function App() {
               blocks={state.blocks}
               warnings={warnings}
               onAdd={() => updateBlocks([...state.blocks, createBlock()])}
+              onBulkAdd={(names) =>
+                updateBlocks([
+                  ...state.blocks,
+                  ...names.map((name) => ({
+                    ...createBlock(),
+                    name,
+                  })),
+                ])
+              }
               onChange={(nextBlock) =>
                 updateBlocks(
                   state.blocks.map((block) =>
@@ -126,6 +132,15 @@ export default function App() {
               residentGroups={derivedGroups.residentGroups}
               warnings={warnings}
               onAdd={() => updateRotations([...state.rotations, createRotation()])}
+              onBulkAdd={(names) =>
+                updateRotations([
+                  ...state.rotations,
+                  ...names.map((name) => ({
+                    ...createRotation(),
+                    name,
+                  })),
+                ])
+              }
               onChange={(nextRotation) =>
                 updateRotations(
                   state.rotations.map((rotation) =>
@@ -145,7 +160,8 @@ export default function App() {
           <YamlPreviewPanel
             displayValue={previewYaml}
             copyValue={yamlString}
-            issueCount={warnings.length}
+            state={state}
+            warnings={warnings}
           />
         }
       />

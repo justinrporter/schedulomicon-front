@@ -8,7 +8,7 @@ The frontend is built with React, TypeScript, Vite, and Tailwind CSS.
 
 ## Why This Exists
 
-The underlying Schedulomicon solver is flexible, but writing the YAML by hand is easy to get wrong. This frontend lowers that barrier with a browser-based form, live validation, and a live YAML preview.
+The underlying Schedulomicon solver is flexible, but writing the YAML by hand isn't a technique that is commonly known to clinicians. The purpose of this this frontend is to lowers that barrier with a browser-based form, live validation, and a live YAML preview. It is _not_ to exhausively cover all the features and advanced techniques that are possible with the configuration file, just a way to get started.
 
 Everything runs locally in the browser:
 
@@ -16,21 +16,6 @@ Everything runs locally in the browser:
 - no database
 - no account system
 - drafts persist in `localStorage`
-
-## Current Scope
-
-The builder currently supports:
-
-- blocks with names and optional groups
-- rotations with names, coverage ranges, optional groups, and optional `rot_count`
-- `rot_count` in flat or per-resident-group form
-- residents with names and optional groups
-- resident-to-rotation prohibitions
-- live YAML preview
-- copy/download YAML
-- validation for duplicate names, invalid ranges, stale prohibitions, and related input issues
-
-The builder intentionally does not expose the full solver schema yet. Advanced features such as vacation, backup, cooldowns, prerequisites, group constraints, and selector DSL authoring still require manual YAML edits after export.
 
 ## Example Output
 

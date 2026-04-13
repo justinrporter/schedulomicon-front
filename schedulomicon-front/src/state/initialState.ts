@@ -4,5 +4,4 @@ export const INITIAL_STATE: ScheduleState = {
   blocks: [],
   rotations: [],
   residents: [],
-  prohibitions: [],
 }

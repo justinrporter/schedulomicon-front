@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 
 import { BlocksSection } from './components/blocks/BlocksSection'
-import { ConstraintsSection } from './components/constraints/ConstraintsSection'
-import type { ConstraintOption } from './components/constraints/ProhibitRow'
 import { FormColumn } from './components/layout/FormColumn'
 import { Header } from './components/layout/Header'
 import { MainLayout } from './components/layout/MainLayout'
@@ -14,24 +12,20 @@ import { ValidationBanner } from './components/shared/ValidationBanner'
 import { usePersistedState } from './hooks/usePersistedState'
 import {
   createBlock,
-  createProhibition,
   createResident,
   createRotation,
 } from './state/factories'
 import { INITIAL_STATE } from './state/initialState'
 import {
-  buildConstraintOptions,
   downloadYaml,
   withWarningPrefix,
 } from './appHelpers'
 import type {
   BlockDef,
-  ProhibitDef,
   ResidentDef,
   RotationDef,
 } from './types'
 import { deriveGroups } from './utils/deriveGroups'
-import { normalizeText } from './utils/strings'
 import { hasErrorWarnings } from './utils/warnings'
 import { validate } from './validation/validate'
 import { generateYaml } from './yaml/generateYaml'
@@ -48,50 +42,6 @@ export default function App() {
     () => withWarningPrefix(yamlString, warnings.length, hasErrors),
     [hasErrors, warnings.length, yamlString],
   )
-
-  const residentOptions = useMemo(() => {
-    const staleValues = state.prohibitions
-      .map((prohibition) => normalizeText(prohibition.residentName))
-      .filter(Boolean)
-
-    const options = new Map<string, ConstraintOption>()
-
-    for (const staleValue of staleValues) {
-      for (const option of buildConstraintOptions(state.residents, staleValue)) {
-        options.set(option.label, option)
-      }
-    }
-
-    if (options.size === 0) {
-      for (const option of buildConstraintOptions(state.residents)) {
-        options.set(option.label, option)
-      }
-    }
-
-    return [...options.values()]
-  }, [state.prohibitions, state.residents])
-
-  const rotationOptions = useMemo(() => {
-    const staleValues = state.prohibitions
-      .map((prohibition) => normalizeText(prohibition.rotationName))
-      .filter(Boolean)
-
-    const options = new Map<string, ConstraintOption>()
-
-    for (const staleValue of staleValues) {
-      for (const option of buildConstraintOptions(state.rotations, staleValue)) {
-        options.set(option.label, option)
-      }
-    }
-
-    if (options.size === 0) {
-      for (const option of buildConstraintOptions(state.rotations)) {
-        options.set(option.label, option)
-      }
-    }
-
-    return [...options.values()]
-  }, [state.prohibitions, state.rotations])
 
   function updateBlocks(nextBlocks: BlockDef[]) {
     setState((currentState) => ({
@@ -111,13 +61,6 @@ export default function App() {
     setState((currentState) => ({
       ...currentState,
       residents: nextResidents,
-    }))
-  }
-
-  function updateProhibitions(nextProhibitions: ProhibitDef[]) {
-    setState((currentState) => ({
-      ...currentState,
-      prohibitions: nextProhibitions,
     }))
   }
 
@@ -193,32 +136,6 @@ export default function App() {
               onDelete={(rotationId) =>
                 updateRotations(
                   state.rotations.filter((rotation) => rotation.id !== rotationId),
-                )
-              }
-            />
-
-            <ConstraintsSection
-              prohibitions={state.prohibitions}
-              residentOptions={residentOptions}
-              rotationOptions={rotationOptions}
-              warnings={warnings}
-              onAdd={() =>
-                updateProhibitions([...state.prohibitions, createProhibition()])
-              }
-              onChange={(nextProhibition) =>
-                updateProhibitions(
-                  state.prohibitions.map((prohibition) =>
-                    prohibition.id === nextProhibition.id
-                      ? nextProhibition
-                      : prohibition,
-                  ),
-                )
-              }
-              onDelete={(prohibitionId) =>
-                updateProhibitions(
-                  state.prohibitions.filter(
-                    (prohibition) => prohibition.id !== prohibitionId,
-                  ),
                 )
               }
             />

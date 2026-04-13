@@ -40,24 +40,45 @@ describe('parser compatibility', () => {
       const pythonExecutable = resolvePythonExecutable()
 
       const state: ScheduleState = {
-        blocks: [{ id: 'b1', name: 'July', groups: ['summer'] }],
+        blocks: [
+          {
+            id: 'b1',
+            name: 'July',
+            parameters: [{ id: 'gp1', kind: 'groups', values: ['summer'] }],
+          },
+        ],
         rotations: [
           {
             id: 'r1',
             name: 'ICU',
-            coverageMin: 1,
-            coverageMax: 2,
-            groups: ['critical'],
-            rotCountMode: 'per-group',
-            rotCountFlat: { min: '', max: '' },
-            rotCountPerGroup: [{ id: 'pg1', group: 'sr', min: 1, max: 2 }],
+            parameters: [
+              { id: 'gp2', kind: 'groups',   values: ['critical'] },
+              { id: 'cp1', kind: 'coverage', min: 1, max: 2 },
+              {
+                id: 'rp1',
+                kind: 'rot_count_per_group',
+                entries: [{ id: 'pg1', group: 'sr', min: 1, max: 2 }],
+              },
+            ],
           },
         ],
         residents: [
-          { id: 'res1', name: 'Alice', groups: ['sr'] },
-          { id: 'res2', name: 'Bob', groups: ['sr'] },
+          {
+            id: 'res1',
+            name: 'Alice',
+            parameters: [
+              { id: 'gp3', kind: 'groups',      values: ['sr'] },
+              { id: 's1',  kind: 'sum_gt_zero',  selector: 'ICU' },
+            ],
+          },
+          {
+            id: 'res2',
+            name: 'Bob',
+            parameters: [
+              { id: 'gp4', kind: 'groups', values: ['sr'] },
+            ],
+          },
         ],
-        prohibitions: [{ id: 'p1', residentName: 'Alice', rotationName: 'ICU' }],
       }
 
       const script = `
@@ -91,21 +112,15 @@ process_config(config)
       const pythonExecutable = resolvePythonExecutable()
 
       const state: ScheduleState = {
-        blocks: [{ id: 'b1', name: 'July', groups: [] }],
+        blocks: [{ id: 'b1', name: 'July', parameters: [] }],
         rotations: [
           {
             id: 'r1',
             name: 'Clinic',
-            coverageMin: '',
-            coverageMax: '',
-            groups: [],
-            rotCountMode: 'flat',
-            rotCountFlat: { min: 2, max: 4 },
-            rotCountPerGroup: [],
+            parameters: [{ id: 'rf1', kind: 'rot_count_flat', min: 2, max: 4 }],
           },
         ],
-        residents: [{ id: 'res1', name: 'Alice', groups: [] }],
-        prohibitions: [],
+        residents: [{ id: 'res1', name: 'Alice', parameters: [] }],
       }
 
       const script = `

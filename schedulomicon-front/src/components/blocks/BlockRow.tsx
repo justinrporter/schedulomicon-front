@@ -1,9 +1,10 @@
-import { useState } from 'react'
-
-import type { BlockDef, ValidationWarning } from '../../types'
-import { GroupTagsInput } from '../shared/GroupTagsInput'
+import type { BlockDef, BlockParam, ValidationWarning } from '../../types'
+import { createGroupsParam } from '../../state/factories'
+import { hasParam } from '../../state/paramHelpers'
 import { DeleteRowButton } from '../shared/DeleteRowButton'
+import { ParameterAddSelect } from '../shared/ParameterAddSelect'
 import { WarningIcon } from '../shared/WarningIcon'
+import { BlockParameterRow } from './BlockParameterRow'
 
 interface BlockRowProps {
   block: BlockDef
@@ -13,7 +14,34 @@ interface BlockRowProps {
 }
 
 export function BlockRow({ block, warnings, onChange, onDelete }: BlockRowProps) {
-  const [showGroups, setShowGroups] = useState(block.groups.length > 0)
+  const params = block.parameters
+  const groupsPresent = hasParam(params, 'groups')
+
+  function addParam(kind: string) {
+    let newParam: BlockParam
+    switch (kind) {
+      case 'groups':
+        newParam = createGroupsParam()
+        break
+      default:
+        return
+    }
+    onChange({ ...block, parameters: [...params, newParam] })
+  }
+
+  function updateParam(id: string, next: BlockParam) {
+    onChange({
+      ...block,
+      parameters: params.map((p) => (p.id === id ? next : p)),
+    })
+  }
+
+  function deleteParam(id: string) {
+    onChange({
+      ...block,
+      parameters: params.filter((p) => p.id !== id),
+    })
+  }
 
   return (
     <div className="entry-card space-y-3">
@@ -40,29 +68,25 @@ export function BlockRow({ block, warnings, onChange, onDelete }: BlockRowProps)
         </div>
       </div>
 
-      <button
-        type="button"
-        className="compact-toggle"
-        onClick={() => setShowGroups((current) => !current)}
-      >
-        {showGroups ? 'Hide groups' : 'Add groups (optional)'}
-      </button>
-
-      {showGroups ? (
-        <div>
-          <span className="field-label">Block Groups</span>
-          <GroupTagsInput
-            tags={block.groups}
-            placeholder="Early Block, Senior Call"
-            onChange={(groups) =>
-              onChange({
-                ...block,
-                groups,
-              })
-            }
-          />
+      {params.length > 0 && (
+        <div className="space-y-2">
+          {params.map((param) => (
+            <BlockParameterRow
+              key={param.id}
+              param={param}
+              onChange={(next) => updateParam(param.id, next)}
+              onDelete={() => deleteParam(param.id)}
+            />
+          ))}
         </div>
-      ) : null}
+      )}
+
+      <ParameterAddSelect
+        options={[
+          { kind: 'groups', label: 'Groups', disabled: groupsPresent },
+        ]}
+        onAdd={addParam}
+      />
 
       {warnings.length > 0 ? (
         <ul className="space-y-1.5">

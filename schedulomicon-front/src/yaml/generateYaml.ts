@@ -1,6 +1,19 @@
 import yaml from 'js-yaml'
 
-import type { NumericInput, ScheduleState } from '../types'
+import type {
+  CoverageParam,
+  GroupsParam,
+  NumericInput,
+  RotationParam,
+  RotCountFlatParam,
+  RotCountPerGroupParam,
+  ResidentParam,
+  ScheduleState,
+  SumEqCountParam,
+  SumEqZeroParam,
+  SumGtZeroParam,
+} from '../types'
+import { findParam } from '../state/paramHelpers'
 import { deriveGroups } from '../utils/deriveGroups'
 import {
   isCompleteRange,
@@ -11,31 +24,12 @@ import {
 
 const EMPTY_STATE_COMMENT = '# Fill in the form to generate YAML\n'
 
-interface YamlEntity {
-  groups?: string[]
-  coverage?: [number, number]
-  rot_count?: [number, number] | Record<string, [number, number]>
-  prohibit?: string[]
-}
+// We use Record<string, unknown> so js-yaml can handle keys like "sum > 0"
+type YamlEntity = Record<string, unknown>
 
-function createNameCountMap(items: Array<{ name: string }>) {
-  const counts = new Map<string, number>()
-
-  for (const item of items) {
-    const name = normalizeText(item.name)
-
-    if (!name) {
-      continue
-    }
-
-    counts.set(name, (counts.get(name) ?? 0) + 1)
-  }
-
-  return counts
-}
-
-function withGroups(groups: string[]) {
-  const normalizedGroups = uniqueTrimmedStrings(groups)
+function withGroups(groupsParam: GroupsParam | undefined): { groups: string[] } | null {
+  if (!groupsParam) return null
+  const normalizedGroups = uniqueTrimmedStrings(groupsParam.values)
   return normalizedGroups.length > 0 ? { groups: normalizedGroups } : null
 }
 
@@ -47,19 +41,112 @@ function toNumericRange(min: NumericInput, max: NumericInput) {
   return [Number(min), Number(max)] as [number, number]
 }
 
+function buildRotationPayload(
+  params: RotationParam[],
+  derivedResidentGroups: string[],
+): YamlEntity {
+  const payload: YamlEntity = {}
+
+  const groupsParam = findParam(params, 'groups') as GroupsParam | undefined
+  const g = withGroups(groupsParam)
+  if (g) payload.groups = g.groups
+
+  const coverage = findParam(params, 'coverage') as CoverageParam | undefined
+  if (coverage) {
+    const range = toNumericRange(coverage.min, coverage.max)
+    if (range) payload.coverage = range
+  }
+
+  const rotFlat = findParam(params, 'rot_count_flat') as RotCountFlatParam | undefined
+  if (rotFlat) {
+    const range = toNumericRange(rotFlat.min, rotFlat.max)
+    if (range) payload.rot_count = range
+  }
+
+  const rotPerGroup = findParam(params, 'rot_count_per_group') as RotCountPerGroupParam | undefined
+  if (rotPerGroup) {
+    const seenGroups = new Set<string>()
+    const perGroup: Record<string, [number, number]> = {}
+
+    for (const entry of rotPerGroup.entries) {
+      const group = normalizeText(entry.group)
+      const range = toNumericRange(entry.min, entry.max)
+
+      if (
+        !group ||
+        !range ||
+        seenGroups.has(group) ||
+        !derivedResidentGroups.includes(group)
+      ) {
+        continue
+      }
+
+      seenGroups.add(group)
+      perGroup[group] = range
+    }
+
+    if (Object.keys(perGroup).length > 0) {
+      payload.rot_count = perGroup
+    }
+  }
+
+  return payload
+}
+
+function buildResidentPayload(params: ResidentParam[]): YamlEntity {
+  const payload: YamlEntity = {}
+
+  const groupsParam = findParam(params, 'groups') as GroupsParam | undefined
+  const g = withGroups(groupsParam)
+  if (g) payload.groups = g.groups
+
+  // Collect sum > 0 selectors
+  const sumGtZeroSelectors = (params.filter((p) => p.kind === 'sum_gt_zero') as SumGtZeroParam[])
+    .map((p) => normalizeText(p.selector))
+    .filter(Boolean) as string[]
+  if (sumGtZeroSelectors.length > 0) {
+    payload['sum > 0'] = sumGtZeroSelectors
+  }
+
+  // Collect sum == 0 selectors
+  const sumEqZeroSelectors = (params.filter((p) => p.kind === 'sum_eq_zero') as SumEqZeroParam[])
+    .map((p) => normalizeText(p.selector))
+    .filter(Boolean) as string[]
+  if (sumEqZeroSelectors.length > 0) {
+    payload['sum == 0'] = sumEqZeroSelectors
+  }
+
+  // Collect sum == N: group by count value
+  const sumEqCountRows = params.filter((p) => p.kind === 'sum_eq_count') as SumEqCountParam[]
+  const countBuckets = new Map<number, string[]>()
+
+  for (const row of sumEqCountRows) {
+    const selector = normalizeText(row.selector)
+    if (!selector) continue
+    if (row.count === '' || row.count === undefined) continue
+    const n = Number(row.count)
+    const bucket = countBuckets.get(n) ?? []
+    bucket.push(selector)
+    countBuckets.set(n, bucket)
+  }
+
+  for (const [n, selectors] of countBuckets.entries()) {
+    payload[`sum == ${n}`] = selectors
+  }
+
+  return payload
+}
+
 export function generateYaml(state: ScheduleState) {
   if (
     state.blocks.length === 0 &&
     state.rotations.length === 0 &&
-    state.residents.length === 0 &&
-    state.prohibitions.length === 0
+    state.residents.length === 0
   ) {
     return EMPTY_STATE_COMMENT
   }
 
   const derivedGroups = deriveGroups(state)
-  const residentNameCounts = createNameCountMap(state.residents)
-  const rotationNameCounts = createNameCountMap(state.rotations)
 
   const blocks: Record<string, YamlEntity | null> = {}
   const rotations: Record<string, YamlEntity | null> = {}
@@ -67,113 +154,27 @@ export function generateYaml(state: ScheduleState) {
 
   for (const block of state.blocks) {
     const name = normalizeText(block.name)
+    if (!name) continue
 
-    if (!name) {
-      continue
-    }
-
-    blocks[name] = withGroups(block.groups)
+    const groupsParam = findParam(block.parameters, 'groups') as GroupsParam | undefined
+    const g = withGroups(groupsParam)
+    blocks[name] = g ?? null
   }
 
   for (const rotation of state.rotations) {
     const name = normalizeText(rotation.name)
+    if (!name) continue
 
-    if (!name) {
-      continue
-    }
-
-    const payload: YamlEntity = {}
-    const groups = uniqueTrimmedStrings(rotation.groups)
-    const coverage = toNumericRange(rotation.coverageMin, rotation.coverageMax)
-
-    if (groups.length > 0) {
-      payload.groups = groups
-    }
-
-    if (coverage) {
-      payload.coverage = coverage
-    }
-
-    if (rotation.rotCountMode === 'flat') {
-      const range = toNumericRange(rotation.rotCountFlat.min, rotation.rotCountFlat.max)
-
-      if (range) {
-        payload.rot_count = range
-      }
-    }
-
-    if (rotation.rotCountMode === 'per-group') {
-      const seenGroups = new Set<string>()
-      const perGroup: Record<string, [number, number]> = {}
-
-      for (const entry of rotation.rotCountPerGroup) {
-        const group = normalizeText(entry.group)
-        const range = toNumericRange(entry.min, entry.max)
-
-        if (
-          !group ||
-          !range ||
-          seenGroups.has(group) ||
-          !derivedGroups.residentGroups.includes(group)
-        ) {
-          continue
-        }
-
-        seenGroups.add(group)
-        perGroup[group] = range
-      }
-
-      if (Object.keys(perGroup).length > 0) {
-        payload.rot_count = perGroup
-      }
-    }
-
+    const payload = buildRotationPayload(rotation.parameters, derivedGroups.residentGroups)
     rotations[name] = Object.keys(payload).length > 0 ? payload : null
   }
 
   for (const resident of state.residents) {
     const name = normalizeText(resident.name)
+    if (!name) continue
 
-    if (!name) {
-      continue
-    }
-
-    residents[name] = withGroups(resident.groups)
-  }
-
-  const prohibitMap = new Map<string, string[]>()
-
-  for (const prohibition of state.prohibitions) {
-    const residentName = normalizeText(prohibition.residentName)
-    const rotationName = normalizeText(prohibition.rotationName)
-
-    if (!residentName || !rotationName) {
-      continue
-    }
-
-    if (residentNameCounts.get(residentName) !== 1) {
-      continue
-    }
-
-    if (rotationNameCounts.get(rotationName) !== 1) {
-      continue
-    }
-
-    const entries = prohibitMap.get(residentName) ?? []
-
-    if (!entries.includes(rotationName)) {
-      entries.push(rotationName)
-      prohibitMap.set(residentName, entries)
-    }
-  }
-
-  for (const [residentName, prohibitionList] of prohibitMap.entries()) {
-    const base = residents[residentName] ?? null
-
-    residents[residentName] = {
-      ...(base ?? {}),
-      prohibit: prohibitionList,
-    }
+    const payload = buildResidentPayload(resident.parameters)
+    residents[name] = Object.keys(payload).length > 0 ? payload : null
   }
 
   return yaml.dump(

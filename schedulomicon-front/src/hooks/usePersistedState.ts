@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import type { ScheduleState } from '../types'
 import { INITIAL_STATE } from '../state/initialState'
 
-export const STORAGE_KEY = 'schedulomicon_front_v1'
+export const STORAGE_KEY = 'schedulomicon_front_v2'
 
 type ReadStorage = Pick<Storage, 'getItem'>
 type WriteStorage = Pick<Storage, 'setItem'>

@@ -1,4 +1,5 @@
-import type { ScheduleState } from '../types'
+import type { GroupsParam, ScheduleState } from '../types'
+import { findParam } from '../state/paramHelpers'
 import { uniqueTrimmedStrings } from './strings'
 
 export interface DerivedGroups {
@@ -10,11 +11,19 @@ export interface DerivedGroups {
 export function deriveGroups(state: ScheduleState): DerivedGroups {
   return {
     residentGroups: uniqueTrimmedStrings(
-      state.residents.flatMap((resident) => resident.groups),
+      state.residents.flatMap((r) =>
+        (findParam(r.parameters, 'groups') as GroupsParam | undefined)?.values ?? [],
+      ),
     ),
-    blockGroups: uniqueTrimmedStrings(state.blocks.flatMap((block) => block.groups)),
+    blockGroups: uniqueTrimmedStrings(
+      state.blocks.flatMap((b) =>
+        (findParam(b.parameters, 'groups') as GroupsParam | undefined)?.values ?? [],
+      ),
+    ),
     rotationGroups: uniqueTrimmedStrings(
-      state.rotations.flatMap((rotation) => rotation.groups),
+      state.rotations.flatMap((rot) =>
+        (findParam(rot.parameters, 'groups') as GroupsParam | undefined)?.values ?? [],
+      ),
     ),
   }
 }

@@ -21,10 +21,9 @@ describe('usePersistedState helpers', () => {
 
   it('rehydrates persisted schedule state from storage', () => {
     const persisted: ScheduleState = {
-      blocks: [{ id: 'b1', name: 'July', groups: ['summer'] }],
+      blocks: [{ id: 'b1', name: 'July', parameters: [{ id: 'p1', kind: 'groups', values: ['summer'] }] }],
       rotations: [],
-      residents: [{ id: 'res1', name: 'Alice', groups: ['sr'] }],
-      prohibitions: [],
+      residents: [{ id: 'res1', name: 'Alice', parameters: [] }],
     }
 
     const storage = {
@@ -38,8 +37,7 @@ describe('usePersistedState helpers', () => {
     const state: ScheduleState = {
       blocks: [],
       rotations: [],
-      residents: [{ id: 'res1', name: 'Alice', groups: [] }],
-      prohibitions: [],
+      residents: [{ id: 'res1', name: 'Alice', parameters: [] }],
     }
 
     const storage = {

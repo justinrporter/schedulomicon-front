@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
-  buildConstraintOptions,
   downloadYaml,
   withWarningPrefix,
 } from './appHelpers'
@@ -24,31 +23,6 @@ describe('App helpers', () => {
     expect(withWarningPrefix('blocks: {}\n', 3, true)).toBe(
       '# WARNING: 3 issues — review before running solver\nblocks: {}\n',
     )
-  })
-
-  it('labels duplicate and deleted constraint options distinctly', () => {
-    expect(
-      buildConstraintOptions(
-        [{ name: ' ICU ' }, { name: 'ICU' }, { name: 'Ward' }, { name: '   ' }],
-        'Deleted Rotation',
-      ),
-    ).toEqual([
-      {
-        value: 'Deleted Rotation',
-        label: '[Deleted: Deleted Rotation]',
-        tone: 'danger',
-      },
-      {
-        value: 'ICU',
-        label: 'ICU (duplicate name)',
-        tone: 'warning',
-      },
-      {
-        value: 'Ward',
-        label: 'Ward',
-        tone: 'default',
-      },
-    ])
   })
 
   it('downloads raw YAML with the expected filename', async () => {

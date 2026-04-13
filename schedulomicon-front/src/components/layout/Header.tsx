@@ -28,8 +28,8 @@ export function Header({
             Schedulomicon
           </h1>
           <p className="mt-1.5 max-w-xl text-sm text-[#51493c] md:text-[0.95rem]">
-            Build blocks, rotations, residents, and prohibitions in a form, then
-            download solver-ready YAML.
+            Build blocks, rotations, and residents in a form, then download
+            solver-ready YAML.
           </p>
         </div>
 

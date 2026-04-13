@@ -8,11 +8,19 @@ import {
   DisclosurePanel,
 } from '@headlessui/react'
 
-import type { RotationDef, ValidationWarning } from '../../types'
-import { isCompleteRange, normalizeText } from '../../utils/strings'
+import type { RotationDef, RotationParam, ValidationWarning } from '../../types'
+import {
+  createCoverageParam,
+  createGroupsParam,
+  createRotCountFlatParam,
+  createRotCountPerGroupParam,
+} from '../../state/factories'
+import { hasParam } from '../../state/paramHelpers'
+import { normalizeText } from '../../utils/strings'
 import { DeleteRowButton } from '../shared/DeleteRowButton'
+import { ParameterAddSelect } from '../shared/ParameterAddSelect'
 import { WarningIcon } from '../shared/WarningIcon'
-import { RotationFields } from './RotationFields'
+import { RotationParameterRow } from './RotationParameterRow'
 
 interface RotationRowProps {
   rotation: RotationDef
@@ -22,41 +30,35 @@ interface RotationRowProps {
   onDelete: () => void
 }
 
-function formatSummary(rotation: RotationDef) {
+function formatSummary(rotation: RotationDef): string {
   const parts: string[] = []
 
-  if (isCompleteRange(rotation.coverageMin, rotation.coverageMax)) {
-    parts.push(`coverage [${rotation.coverageMin}, ${rotation.coverageMax}]`)
-  }
-
-  if (
-    rotation.rotCountMode === 'flat' &&
-    isCompleteRange(rotation.rotCountFlat.min, rotation.rotCountFlat.max)
-  ) {
-    parts.push(`rot_count [${rotation.rotCountFlat.min}, ${rotation.rotCountFlat.max}]`)
-  }
-
-  if (rotation.rotCountMode === 'per-group') {
-    const summary = rotation.rotCountPerGroup
-      .filter((entry) => normalizeText(entry.group))
-      .map(
-        (entry) =>
-          `${entry.group} [${entry.min === '' ? '?' : entry.min}, ${
-            entry.max === '' ? '?' : entry.max
-          }]`,
-      )
-      .join(' · ')
-
-    if (summary) {
-      parts.push(summary)
+  for (const param of rotation.parameters) {
+    if (param.kind === 'coverage') {
+      const { min, max } = param
+      if (min !== '' && max !== '') {
+        parts.push(`coverage [${min}, ${max}]`)
+      }
+    }
+    if (param.kind === 'rot_count_flat') {
+      const { min, max } = param
+      if (min !== '' && max !== '') {
+        parts.push(`rot_count [${min}, ${max}]`)
+      }
+    }
+    if (param.kind === 'rot_count_per_group') {
+      const summary = param.entries
+        .filter((e) => normalizeText(e.group))
+        .map(
+          (e) =>
+            `${e.group} [${e.min === '' ? '?' : e.min}, ${e.max === '' ? '?' : e.max}]`,
+        )
+        .join(' · ')
+      if (summary) parts.push(summary)
     }
   }
 
-  if (parts.length === 0) {
-    return 'Coverage and rotation count rules are still blank.'
-  }
-
-  return parts.join(' · ')
+  return parts.length > 0 ? parts.join(' · ') : 'Coverage and rotation count rules are still blank.'
 }
 
 export function RotationRow({
@@ -66,6 +68,38 @@ export function RotationRow({
   onChange,
   onDelete,
 }: RotationRowProps) {
+  const params = rotation.parameters
+  const groupsPresent     = hasParam(params, 'groups')
+  const coveragePresent   = hasParam(params, 'coverage')
+  const rotFlatPresent    = hasParam(params, 'rot_count_flat')
+  const rotPerGrpPresent  = hasParam(params, 'rot_count_per_group')
+
+  function addParam(kind: string) {
+    let newParam: RotationParam
+    switch (kind) {
+      case 'groups':              newParam = createGroupsParam();           break
+      case 'coverage':            newParam = createCoverageParam();         break
+      case 'rot_count_flat':      newParam = createRotCountFlatParam();     break
+      case 'rot_count_per_group': newParam = createRotCountPerGroupParam(); break
+      default: return
+    }
+    onChange({ ...rotation, parameters: [...params, newParam] })
+  }
+
+  function updateParam(id: string, next: RotationParam) {
+    onChange({
+      ...rotation,
+      parameters: params.map((p) => (p.id === id ? next : p)),
+    })
+  }
+
+  function deleteParam(id: string) {
+    onChange({
+      ...rotation,
+      parameters: params.filter((p) => p.id !== id),
+    })
+  }
+
   return (
     <Disclosure defaultOpen={warnings.length > 0 || !normalizeText(rotation.name)}>
       {({ open }) => (
@@ -95,20 +129,48 @@ export function RotationRow({
           </div>
 
           <DisclosurePanel className="space-y-3.5 px-4 py-4">
-            <RotationFields
-              rotation={rotation}
-              residentGroups={residentGroups}
-              onChange={onChange}
+            <label className="inline-field-row">
+              <span className="inline-field-label">Rotation Name</span>
+              <input
+                type="text"
+                className="input-field"
+                value={rotation.name}
+                placeholder="Wards"
+                onChange={(event) =>
+                  onChange({ ...rotation, name: event.target.value })
+                }
+              />
+            </label>
+
+            {params.length > 0 && (
+              <div className="space-y-2">
+                {params.map((param) => (
+                  <RotationParameterRow
+                    key={param.id}
+                    param={param}
+                    residentGroups={residentGroups}
+                    onChange={(next) => updateParam(param.id, next)}
+                    onDelete={() => deleteParam(param.id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            <ParameterAddSelect
+              options={[
+                { kind: 'groups',              label: 'Groups',                     disabled: groupsPresent },
+                { kind: 'coverage',            label: 'Coverage',                   disabled: coveragePresent },
+                { kind: 'rot_count_flat',      label: 'Rotation count (same for all)', disabled: rotFlatPresent },
+                { kind: 'rot_count_per_group', label: 'Rotation count (per group)', disabled: rotPerGrpPresent },
+              ]}
+              onAdd={addParam}
             />
 
             {warnings.length > 0 ? (
               <ul className="space-y-1.5">
                 {warnings.map((warning) => (
                   <li key={warning.id} className="entry-warning">
-                    <WarningIcon
-                      warning={warning}
-                      className="mt-0.5 h-4 w-4 shrink-0"
-                    />
+                    <WarningIcon warning={warning} className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{warning.message}</span>
                   </li>
                 ))}

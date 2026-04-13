@@ -1,9 +1,15 @@
-import { useState } from 'react'
-
-import type { ResidentDef, ValidationWarning } from '../../types'
+import type { ResidentDef, ResidentParam, ValidationWarning } from '../../types'
+import {
+  createGroupsParam,
+  createSumEqCountParam,
+  createSumEqZeroParam,
+  createSumGtZeroParam,
+} from '../../state/factories'
+import { hasParam } from '../../state/paramHelpers'
 import { DeleteRowButton } from '../shared/DeleteRowButton'
-import { GroupTagsInput } from '../shared/GroupTagsInput'
+import { ParameterAddSelect } from '../shared/ParameterAddSelect'
 import { WarningIcon } from '../shared/WarningIcon'
+import { ResidentParameterRow } from './ResidentParameterRow'
 
 interface ResidentRowProps {
   resident: ResidentDef
@@ -18,7 +24,43 @@ export function ResidentRow({
   onChange,
   onDelete,
 }: ResidentRowProps) {
-  const [showGroups, setShowGroups] = useState(resident.groups.length > 0)
+  const params = resident.parameters
+  const groupsPresent = hasParam(params, 'groups')
+
+  function addParam(kind: string) {
+    let newParam: ResidentParam
+    switch (kind) {
+      case 'groups':
+        newParam = createGroupsParam()
+        break
+      case 'sum_gt_zero':
+        newParam = createSumGtZeroParam()
+        break
+      case 'sum_eq_zero':
+        newParam = createSumEqZeroParam()
+        break
+      case 'sum_eq_count':
+        newParam = createSumEqCountParam()
+        break
+      default:
+        return
+    }
+    onChange({ ...resident, parameters: [...params, newParam] })
+  }
+
+  function updateParam(id: string, next: ResidentParam) {
+    onChange({
+      ...resident,
+      parameters: params.map((p) => (p.id === id ? next : p)),
+    })
+  }
+
+  function deleteParam(id: string) {
+    onChange({
+      ...resident,
+      parameters: params.filter((p) => p.id !== id),
+    })
+  }
 
   return (
     <div className="entry-card space-y-3">
@@ -45,29 +87,28 @@ export function ResidentRow({
         </div>
       </div>
 
-      <button
-        type="button"
-        className="compact-toggle"
-        onClick={() => setShowGroups((current) => !current)}
-      >
-        {showGroups ? 'Hide groups' : 'Add groups (optional)'}
-      </button>
-
-      {showGroups ? (
-        <div>
-          <span className="field-label">Resident Groups</span>
-          <GroupTagsInput
-            tags={resident.groups}
-            placeholder="sr, jr, night-float"
-            onChange={(groups) =>
-              onChange({
-                ...resident,
-                groups,
-              })
-            }
-          />
+      {params.length > 0 && (
+        <div className="space-y-2">
+          {params.map((param) => (
+            <ResidentParameterRow
+              key={param.id}
+              param={param}
+              onChange={(next) => updateParam(param.id, next)}
+              onDelete={() => deleteParam(param.id)}
+            />
+          ))}
         </div>
-      ) : null}
+      )}
+
+      <ParameterAddSelect
+        options={[
+          { kind: 'groups',       label: 'Groups',         disabled: groupsPresent },
+          { kind: 'sum_gt_zero',  label: 'True somewhere', disabled: false },
+          { kind: 'sum_eq_zero',  label: 'Never true',     disabled: false },
+          { kind: 'sum_eq_count', label: 'Count',          disabled: false },
+        ]}
+        onAdd={addParam}
+      />
 
       {warnings.length > 0 ? (
         <ul className="space-y-1.5">

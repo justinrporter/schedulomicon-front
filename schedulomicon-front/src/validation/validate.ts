@@ -1,15 +1,23 @@
 import type {
   BlockDef,
-  ProhibitDef,
+  BlockParam,
+  CoverageParam,
   ResidentDef,
+  ResidentParam,
   RotationDef,
+  RotationParam,
+  RotCountFlatParam,
+  RotCountPerGroupParam,
   ScheduleState,
   SectionName,
+  SumEqCountParam,
+  SumEqZeroParam,
+  SumGtZeroParam,
   ValidationWarning,
 } from '../types'
+import { findParam } from '../state/paramHelpers'
 import { deriveGroups } from '../utils/deriveGroups'
 import {
-  hasMeaningfulSelection,
   isInvalidRange,
   isPartialRange,
   normalizeText,
@@ -73,182 +81,213 @@ function validateNamedSection<T extends BlockDef | RotationDef | ResidentDef>(
   }
 }
 
-function validateRotations(state: ScheduleState, warnings: ValidationWarning[]) {
-  const { residentGroups } = deriveGroups(state)
+// ---------------------------------------------------------------------------
+// Singleton kind check: each of these may appear at most once per entity
+// ---------------------------------------------------------------------------
 
-  for (const rotation of state.rotations) {
-    if (isPartialRange(rotation.coverageMin, rotation.coverageMax)) {
-      warnings.push(
-        makeWarning(
-          'rotations',
-          'warning',
-          'Coverage is partially filled and will be omitted from YAML.',
-          rotation.id,
-        ),
-      )
-    }
+const ROTATION_SINGLETONS: RotationParam['kind'][] = [
+  'groups',
+  'coverage',
+  'rot_count_flat',
+  'rot_count_per_group',
+]
 
-    if (isInvalidRange(rotation.coverageMin, rotation.coverageMax)) {
-      warnings.push(
-        makeWarning(
-          'rotations',
-          'error',
-          'Coverage minimum cannot be greater than coverage maximum.',
-          rotation.id,
-        ),
-      )
-    }
+const BLOCK_SINGLETONS: BlockParam['kind'][] = ['groups']
 
-    if (
-      rotation.rotCountMode === 'flat' &&
-      isInvalidRange(rotation.rotCountFlat.min, rotation.rotCountFlat.max)
-    ) {
-      warnings.push(
-        makeWarning(
-          'rotations',
-          'error',
-          'Rotation count minimum cannot be greater than maximum.',
-          rotation.id,
-        ),
-      )
-    }
+function validateEntityParameters(
+  entity: ResidentDef | RotationDef | BlockDef,
+  section: Extract<SectionName, 'residents' | 'rotations' | 'blocks'>,
+  warnings: ValidationWarning[],
+) {
+  const params = entity.parameters as Array<{ kind: string; id?: string }>
+  const kindCounts = new Map<string, number>()
 
-    if (rotation.rotCountMode !== 'per-group') {
-      continue
-    }
+  for (const param of params) {
+    kindCounts.set(param.kind, (kindCounts.get(param.kind) ?? 0) + 1)
+  }
 
-    const groupCounts = new Map<string, number>()
-
-    for (const entry of rotation.rotCountPerGroup) {
-      const group = normalizeText(entry.group)
-
-      if (group) {
-        groupCounts.set(group, (groupCounts.get(group) ?? 0) + 1)
-      }
-
-      if (isInvalidRange(entry.min, entry.max)) {
+  if (section === 'rotations') {
+    for (const kind of ROTATION_SINGLETONS) {
+      if ((kindCounts.get(kind) ?? 0) > 1) {
         warnings.push(
           makeWarning(
-            'rotations',
+            section,
             'error',
-            `Rotation count for "${group || 'unnamed group'}" has min greater than max.`,
-            rotation.id,
-          ),
-        )
-      }
-
-      if (group && !residentGroups.includes(group)) {
-        warnings.push(
-          makeWarning(
-            'rotations',
-            'warning',
-            `Rotation count references resident group "${group}" that is not currently defined.`,
-            rotation.id,
-          ),
-        )
-      }
-    }
-
-    for (const [group, count] of groupCounts.entries()) {
-      if (count > 1) {
-        warnings.push(
-          makeWarning(
-            'rotations',
-            'error',
-            `Rotation count repeats resident group "${group}".`,
-            rotation.id,
+            `Duplicate parameter "${kind}" on this rotation.`,
+            entity.id,
           ),
         )
       }
     }
   }
-}
 
-function validateProhibitions(
-  residents: ResidentDef[],
-  rotations: RotationDef[],
-  prohibitions: ProhibitDef[],
-  warnings: ValidationWarning[],
-) {
-  const residentBuckets = createNameBuckets(residents)
-  const rotationBuckets = createNameBuckets(rotations)
-  const seenPairs = new Set<string>()
-
-  for (const prohibition of prohibitions) {
-    const residentName = normalizeText(prohibition.residentName)
-    const rotationName = normalizeText(prohibition.rotationName)
-
-    if (!hasMeaningfulSelection(residentName, rotationName)) {
-      continue
-    }
-
-    if (residentName) {
-      const matches = residentBuckets.get(residentName)?.length ?? 0
-
-      if (matches === 0) {
+  if (section === 'blocks') {
+    for (const kind of BLOCK_SINGLETONS) {
+      if ((kindCounts.get(kind) ?? 0) > 1) {
         warnings.push(
           makeWarning(
-            'constraints',
+            section,
             'error',
-            `Prohibition references deleted resident "${residentName}".`,
-            prohibition.id,
-          ),
-        )
-      } else if (matches > 1) {
-        warnings.push(
-          makeWarning(
-            'constraints',
-            'error',
-            `Prohibition references duplicate resident name "${residentName}".`,
-            prohibition.id,
+            `Duplicate parameter "${kind}" on this block.`,
+            entity.id,
           ),
         )
       }
     }
+  }
 
-    if (rotationName) {
-      const matches = rotationBuckets.get(rotationName)?.length ?? 0
-
-      if (matches === 0) {
-        warnings.push(
-          makeWarning(
-            'constraints',
-            'error',
-            `Prohibition references deleted rotation "${rotationName}".`,
-            prohibition.id,
-          ),
-        )
-      } else if (matches > 1) {
-        warnings.push(
-          makeWarning(
-            'constraints',
-            'error',
-            `Prohibition references duplicate rotation name "${rotationName}".`,
-            prohibition.id,
-          ),
-        )
-      }
-    }
-
-    if (!residentName || !rotationName) {
-      continue
-    }
-
-    const pairKey = `${residentName}::${rotationName}`
-
-    if (seenPairs.has(pairKey)) {
+  if (section === 'residents') {
+    // groups is a singleton for residents too
+    if ((kindCounts.get('groups') ?? 0) > 1) {
       warnings.push(
         makeWarning(
-          'constraints',
-          'warning',
-          `Duplicate prohibition for "${residentName}" and "${rotationName}".`,
-          prohibition.id,
+          section,
+          'error',
+          'Duplicate parameter "groups" on this resident.',
+          entity.id,
         ),
       )
-      continue
     }
 
-    seenPairs.add(pairKey)
+    const residentParams = entity.parameters as ResidentParam[]
+
+    for (const param of residentParams) {
+      if (param.kind === 'sum_gt_zero') {
+        const p = param as SumGtZeroParam
+        if (!normalizeText(p.selector)) {
+          warnings.push(
+            makeWarning(
+              section,
+              'warning',
+              'Selector is blank and will be omitted from YAML.',
+              entity.id,
+            ),
+          )
+        }
+      }
+
+      if (param.kind === 'sum_eq_zero') {
+        const p = param as SumEqZeroParam
+        if (!normalizeText(p.selector)) {
+          warnings.push(
+            makeWarning(
+              section,
+              'warning',
+              'Selector is blank and will be omitted from YAML.',
+              entity.id,
+            ),
+          )
+        }
+      }
+
+      if (param.kind === 'sum_eq_count') {
+        const p = param as SumEqCountParam
+        if (!normalizeText(p.selector) || p.count === '' || p.count === undefined) {
+          warnings.push(
+            makeWarning(
+              section,
+              'warning',
+              'Count row is incomplete and will be omitted from YAML.',
+              entity.id,
+            ),
+          )
+        }
+      }
+    }
+  }
+}
+
+function validateRotations(state: ScheduleState, warnings: ValidationWarning[]) {
+  const { residentGroups } = deriveGroups(state)
+
+  for (const rotation of state.rotations) {
+    const coverage = findParam(rotation.parameters, 'coverage') as CoverageParam | undefined
+    const rotCountFlat = findParam(rotation.parameters, 'rot_count_flat') as RotCountFlatParam | undefined
+    const rotCountPerGroup = findParam(rotation.parameters, 'rot_count_per_group') as RotCountPerGroupParam | undefined
+
+    if (coverage) {
+      if (isPartialRange(coverage.min, coverage.max)) {
+        warnings.push(
+          makeWarning(
+            'rotations',
+            'warning',
+            'Coverage is partially filled and will be omitted from YAML.',
+            rotation.id,
+          ),
+        )
+      }
+
+      if (isInvalidRange(coverage.min, coverage.max)) {
+        warnings.push(
+          makeWarning(
+            'rotations',
+            'error',
+            'Coverage minimum cannot be greater than coverage maximum.',
+            rotation.id,
+          ),
+        )
+      }
+    }
+
+    if (rotCountFlat) {
+      if (isInvalidRange(rotCountFlat.min, rotCountFlat.max)) {
+        warnings.push(
+          makeWarning(
+            'rotations',
+            'error',
+            'Rotation count minimum cannot be greater than maximum.',
+            rotation.id,
+          ),
+        )
+      }
+    }
+
+    if (rotCountPerGroup) {
+      const groupCounts = new Map<string, number>()
+
+      for (const entry of rotCountPerGroup.entries) {
+        const group = normalizeText(entry.group)
+
+        if (group) {
+          groupCounts.set(group, (groupCounts.get(group) ?? 0) + 1)
+        }
+
+        if (isInvalidRange(entry.min, entry.max)) {
+          warnings.push(
+            makeWarning(
+              'rotations',
+              'error',
+              `Rotation count for "${group || 'unnamed group'}" has min greater than max.`,
+              rotation.id,
+            ),
+          )
+        }
+
+        if (group && !residentGroups.includes(group)) {
+          warnings.push(
+            makeWarning(
+              'rotations',
+              'warning',
+              `Rotation count references resident group "${group}" that is not currently defined.`,
+              rotation.id,
+            ),
+          )
+        }
+      }
+
+      for (const [group, count] of groupCounts.entries()) {
+        if (count > 1) {
+          warnings.push(
+            makeWarning(
+              'rotations',
+              'error',
+              `Rotation count repeats resident group "${group}".`,
+              rotation.id,
+            ),
+          )
+        }
+      }
+    }
   }
 }
 
@@ -258,8 +297,18 @@ export function validate(state: ScheduleState) {
   validateNamedSection(state.blocks, 'blocks', warnings)
   validateNamedSection(state.rotations, 'rotations', warnings)
   validateNamedSection(state.residents, 'residents', warnings)
+
+  for (const block of state.blocks) {
+    validateEntityParameters(block, 'blocks', warnings)
+  }
+  for (const rotation of state.rotations) {
+    validateEntityParameters(rotation, 'rotations', warnings)
+  }
+  for (const resident of state.residents) {
+    validateEntityParameters(resident, 'residents', warnings)
+  }
+
   validateRotations(state, warnings)
-  validateProhibitions(state.residents, state.rotations, state.prohibitions, warnings)
 
   return warnings.sort((left, right) => {
     if (left.severity !== right.severity) {

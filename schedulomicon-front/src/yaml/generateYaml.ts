@@ -187,6 +187,7 @@ export function generateYaml(state: ScheduleState) {
       quotingType: "'",
       forceQuotes: false,
       indent: 2,
+      flowLevel: 3,
       styles: { '!!null': 'empty' },
     },
   )

@@ -10,6 +10,59 @@ describe('generateYaml', () => {
     expect(generateYaml(INITIAL_STATE)).toBe('# Fill in the form to generate YAML\n')
   })
 
+  it('renders entity parameter values inline while keeping entity mappings block-style', () => {
+    const state: ScheduleState = {
+      blocks: [{ id: 'b1', name: ' July ', groups: [' summer ', 'summer'] }],
+      rotations: [
+        {
+          id: 'r1',
+          name: 'ICU',
+          coverageMin: 1,
+          coverageMax: 2,
+          groups: ['critical'],
+          rotCountMode: 'flat',
+          rotCountFlat: { min: 2, max: 4 },
+          rotCountPerGroup: [],
+        },
+        {
+          id: 'r2',
+          name: 'Night Float',
+          coverageMin: '',
+          coverageMax: '',
+          groups: [],
+          rotCountMode: 'per-group',
+          rotCountFlat: { min: '', max: '' },
+          rotCountPerGroup: [
+            { id: 'pg1', group: 'sr', min: 1, max: 2 },
+            { id: 'pg2', group: 'jr', min: 0, max: 1 },
+          ],
+        },
+      ],
+      residents: [
+        { id: 'res1', name: 'Alice', groups: ['sr'] },
+        { id: 'res2', name: 'Bob', groups: ['jr'] },
+      ],
+      prohibitions: [{ id: 'p1', residentName: 'Alice', rotationName: 'ICU' }],
+    }
+
+    const output = generateYaml(state)
+
+    expect(output).toContain('blocks:\n  July:\n')
+    expect(output).toContain('rotations:\n  ICU:\n')
+    expect(output).toContain('groups: [summer]')
+    expect(output).toContain('groups: [critical]')
+    expect(output).toContain('coverage: [1, 2]')
+    expect(output).toContain('rot_count: [2, 4]')
+    expect(output).toContain('rot_count: {sr: [1, 2], jr: [0, 1]}')
+    expect(output).toContain('groups: [sr]')
+    expect(output).toContain('prohibit: [ICU]')
+    expect(output).not.toContain('groups:\n      - summer')
+    expect(output).not.toContain('coverage:\n      - 1\n      - 2')
+    expect(output).not.toContain('rot_count:\n      - 2\n      - 4')
+    expect(output).not.toContain('rot_count:\n      sr:')
+    expect(output).not.toContain('prohibit:\n      - ICU')
+  })
+
   it('serializes groups as arrays and nests prohibitions under residents', () => {
     const state: ScheduleState = {
       blocks: [{ id: 'b1', name: ' July ', groups: [' summer ', 'summer'] }],
@@ -33,13 +86,21 @@ describe('generateYaml', () => {
     }
 
     const output = generateYaml(state)
+    const parsed = yaml.load(output) as {
+      blocks: Record<string, { groups?: string[] }>
+      rotations: Record<string, { rot_count?: Record<string, [number, number]> }>
+      residents: Record<string, { prohibit?: string[] }>
+    }
 
     expect(output).toContain('July:')
-    expect(output).toContain('- summer')
+    expect(output).toContain('groups: [summer]')
     expect(output).toContain('rot_count:')
-    expect(output).toContain('sr:')
+    expect(output).toContain('rot_count: {sr: [1, 2]}')
     expect(output).toContain('prohibit:')
-    expect(output).toContain('- ICU')
+    expect(output).toContain('prohibit: [ICU]')
+    expect(parsed.blocks.July.groups).toEqual(['summer'])
+    expect(parsed.rotations.ICU.rot_count).toEqual({ sr: [1, 2] })
+    expect(parsed.residents.Alice.prohibit).toEqual(['ICU'])
   })
 
   it('serializes valid flat rot_count ranges', () => {
